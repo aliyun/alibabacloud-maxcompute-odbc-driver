@@ -1,0 +1,304 @@
+name: Release MaxCompute ODBC Driver
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+env:
+  VCPKG_COMMIT: '74e6536215718009aae747d86d84b78376bf9e09'
+
+jobs:
+  # Determine version from tag or manual input
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          fi
+
+  build-windows:
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      VCPKG_ROOT: C:\vcpkg
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
+          vcpkgDirectory: C:\vcpkg
+
+      - name: Install dependencies via vcpkg
+        run: |
+          vcpkg install --triplet=x64-windows `
+            cpp-base64 `
+            cpp-httplib[core,openssl,zlib] `
+            crc32c `
+            date `
+            nlohmann-json `
+            openssl `
+            protobuf[core,zlib] `
+            pugixml `
+            tl-expected `
+            gtest
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build Driver
+        run: |
+          cmake -B build_win64 `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DVCPKG_APPLOCAL_DEPS=OFF
+
+          cmake --build build_win64 --parallel
+
+      - name: Run unit tests
+        run: |
+          cd build_win64
+          ctest --output-on-failure --timeout 120
+
+      - name: Copy dependencies
+        run: |
+          $vcpkgBin = "build_win64\vcpkg_installed\x64-windows\bin"
+          $outputDir = "build_win64\bin"
+
+          @(
+            "libcrypto-3-x64.dll",
+            "libssl-3-x64.dll",
+            "libprotobuf.dll",
+            "pugixml.dll",
+            "zlib1.dll",
+            "crc32c.dll",
+            "date-tz.dll"
+          ) | ForEach-Object {
+            Copy-Item "$vcpkgBin\$_" $outputDir -ErrorAction SilentlyContinue
+          }
+
+      - name: Install WiX Toolset
+        run: |
+          choco install wixtoolset -y --no-progress
+          # Add WiX to PATH
+          $wixDir = "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin"
+          if (-not (Test-Path $wixDir)) {
+            $wixDir = "${env:ProgramFiles(x86)}\WiX Toolset v3.11\bin"
+          }
+          echo "$wixDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build MSI installer
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $version4 = "$version.0"
+
+          # Prepare installer_build directory
+          New-Item -ItemType Directory -Force -Path installer_build | Out-Null
+
+          # Copy driver and dependency DLLs
+          $vcpkgBin = "build_win64\vcpkg_installed\x64-windows\bin"
+          Copy-Item "build_win64\bin\maxcompute_odbc.dll" "installer_build\" -Force
+          @(
+            "libcrypto-3-x64.dll",
+            "libssl-3-x64.dll",
+            "libprotobuf.dll",
+            "pugixml.dll",
+            "zlib1.dll",
+            "crc32c.dll",
+            "date-tz.dll"
+          ) | ForEach-Object {
+            Copy-Item "$vcpkgBin\$_" "installer_build\" -ErrorAction SilentlyContinue
+          }
+
+          # Generate License.rtf from LICENSE
+          python scripts\generate_license_rtf.py
+
+          # Build MSI
+          candle.exe Product.wxs -dProductVersion=$version4 -out installer_build\Product.wixobj
+          light.exe installer_build\Product.wixobj -ext WixUIExtension -ext WixUtilExtension -out "MaxCompute_ODBC_Driver_$version.msi"
+
+      # Code signing: Sign the driver DLL and MSI to avoid Windows SmartScreen warnings.
+      # Requires Azure Trusted Signing or a code signing certificate.
+      # To enable, set the following repository secrets:
+      #   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+      #   AZURE_CODE_SIGNING_ACCOUNT, AZURE_CERTIFICATE_PROFILE
+      # See docs/code-signing.md for setup instructions.
+      - name: Sign driver DLL and MSI (Azure Trusted Signing)
+        if: env.AZURE_CODE_SIGNING_ACCOUNT != ''
+        env:
+          AZURE_CODE_SIGNING_ACCOUNT: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
+        uses: azure/trusted-signing-action@v0.5.0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE }}
+          files-folder: ${{ github.workspace }}
+          files-folder-filter: exe,dll,msi
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Upload DLL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxcompute-odbc-windows-x64
+          path: |
+            build_win64/bin/maxcompute_odbc.dll
+            build_win64/bin/*.dll
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxcompute-odbc-windows-x64-msi
+          path: MaxCompute_ODBC_Driver_*.msi
+
+  build-macos:
+    runs-on: macos-latest
+    env:
+      VCPKG_ROOT: /usr/local/share/vcpkg
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
+          vcpkgDirectory: /usr/local/share/vcpkg
+
+      - name: Install system dependencies
+        run: |
+          brew install ninja unixodbc
+
+      - name: Build Driver
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+          cmake --build build --parallel
+
+      - name: Run unit tests
+        run: |
+          cd build
+          ctest --output-on-failure --timeout 120
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxcompute-odbc-macos-x64
+          path: build/lib/libmaxcompute_odbc.dylib
+
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      VCPKG_ROOT: /usr/local/share/vcpkg
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build unixodbc-dev
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
+          vcpkgDirectory: /usr/local/share/vcpkg
+
+      - name: Build Driver
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+          cmake --build build --parallel
+
+      - name: Run unit tests
+        run: |
+          cd build
+          ctest --output-on-failure --timeout 120
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxcompute-odbc-linux-x64
+          path: build/lib/libmaxcompute_odbc.so
+
+  create-release:
+    needs: [prepare, build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release Archives
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          mkdir -p release
+
+          # Windows DLL archive
+          cd artifacts/maxcompute-odbc-windows-x64
+          zip -r "../../release/maxcompute-odbc-${VERSION}-windows-x64.zip" *
+          cd ../..
+
+          # Windows MSI
+          cp artifacts/maxcompute-odbc-windows-x64-msi/*.msi "release/" 2>/dev/null || true
+
+          # macOS archive
+          cd artifacts/maxcompute-odbc-macos-x64
+          tar -czf "../../release/maxcompute-odbc-${VERSION}-macos-x64.tar.gz" *
+          cd ../..
+
+          # Linux archive
+          cd artifacts/maxcompute-odbc-linux-x64
+          tar -czf "../../release/maxcompute-odbc-${VERSION}-linux-x64.tar.gz" *
+          cd ../..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: MaxCompute ODBC Driver ${{ needs.prepare.outputs.version }}
+          files: release/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

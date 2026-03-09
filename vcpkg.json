@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "maxcompute-odbc-driver",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "openssl",
+    "cpp-base64",
+    {
+      "name": "cpp-httplib",
+      "default-features": false,
+      "features": [ "openssl", "zlib" ]
+    },
+    "pugixml",
+    "nlohmann-json",
+    "tl-expected",
+    {
+      "name": "protobuf",
+      "features": [ "zlib" ]
+    },
+    "crc32c",
+    {
+      "name": "unixodbc",
+      "platform": "linux | osx"
+    },
+    "date",
+    "gtest",
+    {
+      "name": "libiconv",
+      "platform": "linux | osx"
+    }
+  ],
+  "builtin-baseline": "74e6536215718009aae747d86d84b78376bf9e09",
+
+  "overrides": [
+    { "name": "protobuf", "version": "3.7.1" }
+  ]
+}

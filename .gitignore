@@ -1,0 +1,129 @@
+# Build directories
+build/
+build*/
+cmake-build-*/
+out/
+
+# IDE files
+.idea/
+.vscode/
+CMakeSettings.json
+*.iws
+*.ipr
+*.iml
+
+# Compiled object files
+*.o
+*.obj
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Compiled static libraries
+*.lib
+*.a
+
+# Shared libraries and executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*~
+*.swp
+*.swo
+
+# CMake files
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Debug files
+*.dSYM
+*.d
+*.pdb
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage data
+*.gcda
+*.gcno
+*.gcov
+
+# Tags
+tags
+TAGS
+ctags
+cscope.*
+
+# Package files
+*.tar.gz
+*.zip
+
+# Windows installer artifacts
+*.msi
+*.wixpdb
+*.wixobj
+installer_build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test output
+test-results/
+test-reports/
+
+# Documentation artifacts
+docs/_build/
+docs/_site/
+
+# VS
+.vs
+
+# AI tool directories
+.claude
+.qoder
+
+# vcpkg installed packages
+vcpkg_installed/
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+.Python
+.pytest_cache/
+.venv/
+
+# Internal/development files
+IFLOW.md
+IMPLEMENTATION_SUMMARY.md
+FORMATTING.md
+MaxCompute_ODBC_Driver_Readme.txt

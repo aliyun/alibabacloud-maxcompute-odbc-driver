@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <!-- Product Information: version is passed via candle.exe -dProductVersion=x.y.z.0 -->
+  <Product Id="*" Name="MaxCompute ODBC Driver" Language="1033" Version="$(var.ProductVersion)" Manufacturer="Alibaba Cloud" UpgradeCode="453E16A6-A0F1-4307-874C-93D3F97294D7">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
+             Platform="x64"
+             Description="Alibaba Cloud MaxCompute ODBC Driver Setup"
+             Comments="Provides connectivity to MaxCompute via ODBC" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of MaxCompute ODBC Driver is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Feature Definition -->
+    <Feature Id="ProductFeature" Title="MaxCompute ODBC Driver" Level="1">
+      <ComponentRef Id="MaxComputeDriverDllComponent" />
+      <ComponentRef Id="LibCryptoDllComponent" />
+      <ComponentRef Id="LibSslDllComponent" />
+      <ComponentRef Id="LibProtobufDllComponent" />
+      <ComponentRef Id="PugiXmlDllComponent" />
+      <ComponentRef Id="ZlibDllComponent" />
+      <ComponentRef Id="Crc32cDllComponent" />
+      <ComponentRef Id="DateTzDllComponent" />
+      <ComponentRef Id="MaxComputeDriverRegistry" />
+      <ComponentRef Id="MaxComputeTestDSNRegistry" />
+      <ComponentRef Id="MaxComputeReadmeFile" />
+    </Feature>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <!-- Install driver DLLs to System64Folder -->
+      <Directory Id="System64Folder">
+        <!-- Main driver DLL -->
+        <Component Id="MaxComputeDriverDllComponent" Guid="*" Win64="yes">
+          <File Id="MaxComputeDriverDll" Name="maxcompute_odbc.dll" Source="installer_build\maxcompute_odbc.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- OpenSSL -->
+        <Component Id="LibCryptoDllComponent" Guid="*" Win64="yes">
+          <File Id="LibCryptoDll" Name="libcrypto-3-x64.dll" Source="installer_build\libcrypto-3-x64.dll" KeyPath="yes" />
+        </Component>
+        <Component Id="LibSslDllComponent" Guid="*" Win64="yes">
+          <File Id="LibSslDll" Name="libssl-3-x64.dll" Source="installer_build\libssl-3-x64.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- Protocol Buffers -->
+        <Component Id="LibProtobufDllComponent" Guid="*" Win64="yes">
+          <File Id="LibProtobufDll" Name="libprotobuf.dll" Source="installer_build\libprotobuf.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- pugixml -->
+        <Component Id="PugiXmlDllComponent" Guid="*" Win64="yes">
+          <File Id="PugiXmlDll" Name="pugixml.dll" Source="installer_build\pugixml.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- zlib -->
+        <Component Id="ZlibDllComponent" Guid="*" Win64="yes">
+          <File Id="ZlibDll" Name="zlib1.dll" Source="installer_build\zlib1.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- CRC32-C -->
+        <Component Id="Crc32cDllComponent" Guid="*" Win64="yes">
+          <File Id="Crc32cDll" Name="crc32c.dll" Source="installer_build\crc32c.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- date-tz -->
+        <Component Id="DateTzDllComponent" Guid="*" Win64="yes">
+          <File Id="DateTzDll" Name="date-tz.dll" Source="installer_build\date-tz.dll" KeyPath="yes" />
+        </Component>
+
+        <!-- ODBC driver registry entry -->
+        <Component Id="MaxComputeDriverRegistry" Guid="*" Win64="yes">
+          <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\MaxCompute ODBC Driver">
+            <RegistryValue Name="Driver" Type="string" Value="[System64Folder]maxcompute_odbc.dll" KeyPath="yes" />
+            <RegistryValue Name="DriverODBCVer" Type="string" Value="03.80" />
+          </RegistryKey>
+          <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers">
+            <RegistryValue Name="MaxCompute ODBC Driver" Type="string" Value="Installed"/>
+          </RegistryKey>
+        </Component>
+
+        <!-- Test DSN registry entry -->
+        <Component Id="MaxComputeTestDSNRegistry" Guid="*" Win64="yes">
+          <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\MaxComputeTestDSN">
+            <RegistryValue Name="Driver" Type="string" Value="[System64Folder]maxcompute_odbc.dll" KeyPath="yes" />
+          </RegistryKey>
+          <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources">
+            <RegistryValue Name="MaxComputeTestDSN" Type="string" Value="MaxCompute ODBC Driver"/>
+          </RegistryKey>
+        </Component>
+      </Directory>
+
+      <!-- Documentation -->
+      <Directory Id="ProgramFiles6432Folder">
+        <Directory Id="INSTALLFOLDER" Name="MaxComputeODBC">
+          <Component Id="MaxComputeReadmeFile" Guid="A4C65E34-B4E3-4C6D-8A55-EA36644C64E5">
+            <File Id="ReadmeFile" Name="README.md" KeyPath="yes" Source="README.md" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <!-- License Agreement -->
+    <WixVariable Id="WixUILicenseRtf" Value="installer_build\License.rtf" />
+
+    <!-- UI Configuration -->
+    <UIRef Id="WixUI_Minimal" />
+  </Product>
+</Wix>

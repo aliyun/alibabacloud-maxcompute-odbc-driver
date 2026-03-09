@@ -1,0 +1,55 @@
+LIBRARY maxcompute_odbc
+
+EXPORTS
+    SQLAllocEnv
+    SQLFreeEnv
+    SQLAllocConnect
+    SQLFreeConnect
+    SQLAllocStmt
+    SQLFreeStmt
+    SQLAllocHandle
+    SQLFreeHandle
+
+    SQLConnect
+    SQLDisconnect
+    SQLDriverConnect
+    SQLDriverConnectA
+    SQLDriverConnectW
+
+    SQLExecDirect
+    SQLExecDirectW
+    SQLPrepare
+    SQLPrepareW
+    SQLExecute
+    SQLFetch
+
+    SQLBindCol
+    SQLNumResultCols
+    SQLDescribeCol
+    SQLDescribeColW
+    SQLRowCount
+    SQLColAttribute
+    SQLColAttributeW
+    SQLGetData
+
+    SQLTables
+    SQLTablesW
+    SQLColumns
+    SQLColumnsW
+
+    SQLGetDiagRec
+    SQLGetDiagRecW
+    SQLGetDiagField
+    SQLGetDiagFieldW
+
+    SQLSetEnvAttr
+    SQLGetStmtAttr
+    SQLGetInfo
+    SQLGetInfoW
+
+    SQLSetConnectAttr
+    SQLSetConnectAttrW
+
+    SQLSetStmtAttr
+    SQLSetStmtAttrW
+    SQLMoreResults
