@@ -53,7 +53,7 @@ find_package(pugixml CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(tl-expected CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
-find_package(crc32c CONFIG REQUIRED)
+find_package(Crc32c CONFIG REQUIRED)
 
 # Find libltdl for dynamic loading support
 find_package(PkgConfig QUIET)
