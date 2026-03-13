@@ -6,6 +6,10 @@ project(maxcompute_odbc_driver VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable position-independent code for all targets
+# Required on Linux when static libraries are linked into shared libraries
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # macOS 26+ may need explicit C++ standard library include path
 if(APPLE)
     # Get SDK path
