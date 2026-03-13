@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master, main ]
 
+env:
+  VCPKG_COMMIT: '74e6536215718009aae747d86d84b78376bf9e09'
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -15,15 +18,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: '74e6536215718009aae747d86d84b78376bf9e09'
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
           vcpkgDirectory: ${{ github.workspace }}/vcpkg
-
-      - name: Install dependencies via vcpkg
-        run: |
-          vcpkg install --triplet=x64-windows
+          runVcpkgInstall: true
+        env:
+          VCPKG_BINARY_SOURCES: 'clear;x-gha,readwrite'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -57,11 +66,21 @@ jobs:
         run: |
           brew install ninja unixodbc autoconf autoconf-archive automake libtool
 
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: '74e6536215718009aae747d86d84b78376bf9e09'
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
           vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          runVcpkgInstall: true
+        env:
+          VCPKG_BINARY_SOURCES: 'clear;x-gha,readwrite'
 
       - name: Build
         run: |
@@ -90,11 +109,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build unixodbc-dev autoconf autoconf-archive automake libtool libltdl-dev
 
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: '74e6536215718009aae747d86d84b78376bf9e09'
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
           vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          runVcpkgInstall: true
+        env:
+          VCPKG_BINARY_SOURCES: 'clear;x-gha,readwrite'
 
       - name: Build
         run: |
