@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 // Windows ODBC requires specific include order
+// windows.h must be included BEFORE sql.h to provide base type definitions
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif

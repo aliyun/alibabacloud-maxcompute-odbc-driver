@@ -1,7 +1,7 @@
 #pragma once
 #include "maxcompute_odbc/config/config.h"
 #include "maxcompute_odbc/maxcompute_client/client.h"
-#include "maxcompute_odbc/platform.h"
+#include "maxcompute_odbc/platform.h"  // Must include before sql.h on Windows
 #include <memory>
 #include <sql.h>
 #include <sqlext.h>

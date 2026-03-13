@@ -1,7 +1,7 @@
 #ifndef MAXCOMPUTE_ODBC_ENTRY_POINTS_H
 #define MAXCOMPUTE_ODBC_ENTRY_POINTS_H
 
-#include "maxcompute_odbc/platform.h"
+#include "maxcompute_odbc/platform.h"  // Must include before sql.h on Windows
 #include <sql.h>
 #include <sqlext.h>
 #include <sqlucode.h>
