@@ -3,6 +3,7 @@
 #include "maxcompute_odbc/odbc_api/entry_points.h"
 #include "maxcompute_odbc/odbc_api/handle_registry.h"
 #include "maxcompute_odbc/odbc_api/handles.h"
+#include <cstring>      // for strlen, strcmp, memcpy
 #include <type_traits>  // For std::is_same_v
 
 // Import string conversion utilities from maxcompute_odbc namespace

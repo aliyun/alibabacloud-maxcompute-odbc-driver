@@ -2,6 +2,7 @@
 #include "maxcompute_odbc/maxcompute_client/client.h"
 #include "maxcompute_odbc/maxcompute_client/models.h"
 #include "maxcompute_odbc/maxcompute_client/typeinfo.h"
+#include <cstring>  // for std::strlen, std::strcmp
 #include <sstream>
 #include "cpp-base64/base64.h"
 #include "nlohmann/json.hpp"

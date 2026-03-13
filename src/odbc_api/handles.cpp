@@ -1,6 +1,7 @@
 #include "maxcompute_odbc/common/logging.h"
 #include "maxcompute_odbc/odbc_api/conversions.h"
 #include "maxcompute_odbc/odbc_api/handles.h"
+#include <cstring>  // for memcpy
 
 namespace maxcompute_odbc {
 
