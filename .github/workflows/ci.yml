@@ -6,12 +6,11 @@ on:
   pull_request:
     branches: [ master, main ]
 
-env:
-  VCPKG_ROOT: C:\vcpkg
-
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,21 +19,11 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: '74e6536215718009aae747d86d84b78376bf9e09'
-          vcpkgDirectory: C:\vcpkg
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
 
       - name: Install dependencies via vcpkg
         run: |
-          vcpkg install --triplet=x64-windows `
-            cpp-base64 `
-            cpp-httplib[core,openssl,zlib] `
-            crc32c `
-            date `
-            nlohmann-json `
-            openssl `
-            protobuf[core,zlib] `
-            pugixml `
-            tl-expected `
-            gtest
+          vcpkg install --triplet=x64-windows
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -59,20 +48,20 @@ jobs:
   build-macos:
     runs-on: macos-latest
     env:
-      VCPKG_ROOT: /usr/local/share/vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install ninja unixodbc
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: '74e6536215718009aae747d86d84b78376bf9e09'
-          vcpkgDirectory: /usr/local/share/vcpkg
-
-      - name: Install system dependencies
-        run: |
-          brew install ninja unixodbc
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
 
       - name: Build
         run: |
@@ -91,7 +80,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     env:
-      VCPKG_ROOT: /usr/local/share/vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -105,7 +94,7 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: '74e6536215718009aae747d86d84b78376bf9e09'
-          vcpkgDirectory: /usr/local/share/vcpkg
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
 
       - name: Build
         run: |

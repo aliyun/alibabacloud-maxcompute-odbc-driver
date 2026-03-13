@@ -38,7 +38,7 @@ jobs:
     needs: prepare
     runs-on: windows-latest
     env:
-      VCPKG_ROOT: C:\vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,21 +47,11 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
-          vcpkgDirectory: C:\vcpkg
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
 
       - name: Install dependencies via vcpkg
         run: |
-          vcpkg install --triplet=x64-windows `
-            cpp-base64 `
-            cpp-httplib[core,openssl,zlib] `
-            crc32c `
-            date `
-            nlohmann-json `
-            openssl `
-            protobuf[core,zlib] `
-            pugixml `
-            tl-expected `
-            gtest
+          vcpkg install --triplet=x64-windows
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -86,7 +76,7 @@ jobs:
 
       - name: Copy dependencies
         run: |
-          $vcpkgBin = "build_win64\vcpkg_installed\x64-windows\bin"
+          $vcpkgBin = "${{ github.workspace }}\vcpkg\installed\x64-windows\bin"
           $outputDir = "build_win64\bin"
 
           @(
@@ -120,7 +110,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path installer_build | Out-Null
 
           # Copy driver and dependency DLLs
-          $vcpkgBin = "build_win64\vcpkg_installed\x64-windows\bin"
+          $vcpkgBin = "${{ github.workspace }}\vcpkg\installed\x64-windows\bin"
           Copy-Item "build_win64\bin\maxcompute_odbc.dll" "installer_build\" -Force
           @(
             "libcrypto-3-x64.dll",
@@ -183,20 +173,20 @@ jobs:
   build-macos:
     runs-on: macos-latest
     env:
-      VCPKG_ROOT: /usr/local/share/vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install ninja unixodbc
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
-          vcpkgDirectory: /usr/local/share/vcpkg
-
-      - name: Install system dependencies
-        run: |
-          brew install ninja unixodbc
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
 
       - name: Build Driver
         run: |
@@ -221,7 +211,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     env:
-      VCPKG_ROOT: /usr/local/share/vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -235,7 +225,7 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
-          vcpkgDirectory: /usr/local/share/vcpkg
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
 
       - name: Build Driver
         run: |
