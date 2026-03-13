@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <any>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <tuple>
