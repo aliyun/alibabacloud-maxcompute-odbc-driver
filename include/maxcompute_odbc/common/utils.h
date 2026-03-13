@@ -9,9 +9,11 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+// clang-format off
+#include <windows.h>
 #include <sql.h>
 #include <sqlext.h>
-#include <windows.h>
+// clang-format on
 #include <winhttp.h>
 #include <wininet.h>
 #else
