@@ -100,13 +100,23 @@ sudo make install
 
 ### Windows
 
-#### Environment Setup
+#### 推荐：使用 MSI 安装包（无需编译）
+
+1. **安装前置依赖**：如果系统未安装 Visual C++ Redistributable，请先从 [Microsoft 官方页面](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) 下载安装。
+
+2. **下载安装包**：[MaxCompute_ODBC_Driver.msi](https://maxcompute-repo.oss-cn-hangzhou.aliyuncs.com/odbc/MaxCompute_ODBC_Driver.msi)
+
+3. **安装**：双击下载的 MSI 文件，按向导完成安装。
+
+#### 从源码编译（可选）
+
+##### Environment Setup
 
 1. Install Visual Studio 2022 with the C++ x64/x86 build tools.
 2. Install CMake.
 3. Install vcpkg and set the `VCPKG_ROOT` environment variable.
 
-#### Build Steps
+##### Build Steps
 
 **Option 1: CMake Command Line (Recommended)**
 
@@ -125,7 +135,7 @@ cmake --build . --config Release
 
 Open the project root in Visual Studio, configure CMake settings to use the vcpkg toolchain file, and build.
 
-#### Build Output
+##### Build Output
 
 After a successful build the following files are produced:
 

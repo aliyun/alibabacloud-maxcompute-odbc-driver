@@ -3,8 +3,18 @@ name: CI
 on:
   push:
     branches: [ master, main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
     branches: [ master, main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
 
 env:
   VCPKG_COMMIT: '74e6536215718009aae747d86d84b78376bf9e09'
