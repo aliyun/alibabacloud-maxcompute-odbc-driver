@@ -77,6 +77,7 @@ jobs:
 
       - name: Run unit tests
         run: |
+          $env:PATH = "${{ github.workspace }}\vcpkg\installed\x64-windows\bin;$env:PATH"
           cd build_win64
           ctest --output-on-failure --timeout 120
 
@@ -136,31 +137,6 @@ jobs:
           # Build MSI
           candle.exe Product.wxs -dProductVersion=$version4 -out installer_build\Product.wixobj
           light.exe installer_build\Product.wixobj -ext WixUIExtension -ext WixUtilExtension -out "MaxCompute_ODBC_Driver_$version.msi"
-
-      # Code signing: Sign the driver DLL and MSI to avoid Windows SmartScreen warnings.
-      # Requires Azure Trusted Signing or a code signing certificate.
-      # To enable, set the following repository secrets:
-      #   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
-      #   AZURE_CODE_SIGNING_ACCOUNT, AZURE_CERTIFICATE_PROFILE
-      # See docs/code-signing.md for setup instructions.
-      - name: Sign driver DLL and MSI (Azure Trusted Signing)
-        if: env.AZURE_CODE_SIGNING_ACCOUNT != ''
-        env:
-          AZURE_CODE_SIGNING_ACCOUNT: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
-        uses: azure/trusted-signing-action@v0.5.0
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: https://eus.codesigning.azure.net/
-          trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE }}
-          files-folder: ${{ github.workspace }}
-          files-folder-filter: exe,dll,msi
-          files-folder-recurse: true
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
 
       - name: Upload DLL artifact
         uses: actions/upload-artifact@v4
