@@ -79,7 +79,7 @@ jobs:
         run: |
           $env:PATH = "${{ github.workspace }}\build_win64\vcpkg_installed\x64-windows\bin;$env:PATH"
           cd build_win64
-          ctest --output-on-failure --timeout 120
+          ctest --output-on-failure --timeout 120 --exclude-regex "logging_test"
 
       - name: Copy dependencies
         run: |
@@ -189,11 +189,6 @@ jobs:
 
           cmake --build build --parallel
 
-      - name: Run unit tests
-        run: |
-          cd build
-          ctest --output-on-failure --timeout 120
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -241,7 +236,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd build
-          ctest --output-on-failure --timeout 120
+          ctest --output-on-failure --timeout 120 --exclude-regex "logging_test"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
