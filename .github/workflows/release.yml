@@ -77,13 +77,13 @@ jobs:
 
       - name: Run unit tests
         run: |
-          $env:PATH = "${{ github.workspace }}\vcpkg\installed\x64-windows\bin;$env:PATH"
+          $env:PATH = "${{ github.workspace }}\build_win64\vcpkg_installed\x64-windows\bin;$env:PATH"
           cd build_win64
           ctest --output-on-failure --timeout 120
 
       - name: Copy dependencies
         run: |
-          $vcpkgBin = "${{ github.workspace }}\vcpkg\installed\x64-windows\bin"
+          $vcpkgBin = "${{ github.workspace }}\build_win64\vcpkg_installed\x64-windows\bin"
           $outputDir = "build_win64\bin"
 
           @(
