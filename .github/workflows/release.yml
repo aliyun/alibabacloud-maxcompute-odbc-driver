@@ -135,7 +135,7 @@ jobs:
           python scripts\generate_license_rtf.py
 
           # Build MSI
-          candle.exe Product.wxs -dProductVersion=$version4 -out installer_build\Product.wixobj
+          candle.exe Product.wxs -dProductVersion="$version4" -out installer_build\Product.wixobj
           light.exe installer_build\Product.wixobj -ext WixUIExtension -ext WixUtilExtension -out "MaxCompute_ODBC_Driver_$version.msi"
 
       - name: Upload DLL artifact
