@@ -2,6 +2,8 @@
 
 This document outlines the development roadmap for the MaxCompute ODBC Driver after the v1.0.0 open-source release.
 
+> **Note:** This roadmap reflects our current planning and priorities. Actual delivery timelines are not guaranteed and may change based on community feedback and contributions. We welcome pull requests!
+
 Priorities are labeled as:
 - **P0**: Critical -- blocks mainstream adoption
 - **P1**: High -- significant quality/usability improvement
@@ -10,7 +12,7 @@ Priorities are labeled as:
 
 ---
 
-## v1.1.0 -- Feature Completion & Distribution (1-2 months)
+## v1.1.0 -- Feature Completion & Distribution
 
 ### P0: SQLBindParameter Implementation
 
@@ -46,7 +48,7 @@ Many BI tools call these functions during initial connection to probe database c
 Systematically test and document compatibility with major tools:
 
 - [ ] Tableau Desktop / Server
-- [ ] Power BI Desktop / Service
+- [x] Power BI Desktop / Service
 - [ ] DBeaver
 - [ ] Apache Superset
 - [ ] Excel (via ODBC data source)
@@ -63,7 +65,7 @@ Lower the barrier to installation -- users should not need to compile from sourc
 
 ---
 
-## v1.2.0 -- Performance & Reliability (3-4 months)
+## v1.2.0 -- Performance & Reliability
 
 ### P1: Mock Server for CI E2E Tests
 
@@ -107,7 +109,7 @@ MaxCompute is a cloud service; network instability is expected.
 
 ---
 
-## v2.0.0 -- Architecture Evolution (6+ months)
+## v2.0.0 -- Architecture Evolution
 
 ### P2: Apache Arrow Format Support
 

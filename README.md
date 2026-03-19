@@ -343,10 +343,12 @@ conn = pyodbc.connect("DRIVER={MaxCompute ODBC Driver};InteractiveMode=true")
 
 ### Windows ODBC Data Source Configuration
 
-1. Open **ODBC Data Sources (64-bit)** and select the **System DSN** or **User DSN** tab.
-2. Click **Add**, choose **MaxCompute ODBC Driver**, and click **Finish**.
-3. Fill in the connection parameters (Endpoint, Project, AccessKeyId, AccessKeySecret, etc.).
-4. Click **Test** to verify the configuration, then save.
+> **Note:** This driver does not provide a GUI configuration dialog. DSN configuration via the Windows ODBC Data Source Administrator ("Add" / "Configure" buttons) is **not supported**. All connection parameters must be specified through connection strings.
+
+The MSI installer automatically creates a sample DSN named `MaxComputeTestDSN`. To use the driver:
+
+1. **Recommended:** Use a connection string directly in your application (see examples above).
+2. **Alternative:** If your application requires a DSN, use `MaxComputeTestDSN` as the DSN name and provide all other parameters via the connection string.
 
 Regional endpoint examples:
 
@@ -539,6 +541,15 @@ cmake -S . -B out/build/x64-Release -G "Visual Studio 17 2022" -A x64 ^
       -DVCPKG_TARGET_TRIPLET="x64-windows"
 cmake --build out/build/x64-Release --config Release
 ```
+
+### Windows ODBC 数据源配置
+
+> **注意：** 本驱动不提供 GUI 配置界面。不支持通过 Windows ODBC 数据源管理器的"添加"/"配置"按钮进行 DSN 配置。所有连接参数必须通过连接字符串指定。
+
+MSI 安装程序会自动创建一个名为 `MaxComputeTestDSN` 的示例 DSN。使用方法：
+
+1. **推荐：** 在应用程序中直接使用连接字符串。
+2. **备选：** 如果应用程序必须使用 DSN，可使用 `MaxComputeTestDSN` 作为 DSN 名称，其他参数通过连接字符串提供。
 
 ## 连接参数
 
