@@ -18,8 +18,7 @@
       <ComponentRef Id="LibProtobufDllComponent" />
       <ComponentRef Id="PugiXmlDllComponent" />
       <ComponentRef Id="ZlibDllComponent" />
-      <ComponentRef Id="Crc32cDllComponent" />
-      <ComponentRef Id="DateTzDllComponent" />
+
       <ComponentRef Id="MaxComputeDriverRegistry" />
       <ComponentRef Id="MaxComputeTestDSNRegistry" />
       <ComponentRef Id="MaxComputeReadmeFile" />
@@ -56,15 +55,6 @@
           <File Id="ZlibDll" Name="zlib1.dll" Source="installer_build\zlib1.dll" KeyPath="yes" />
         </Component>
 
-        <!-- CRC32-C -->
-        <Component Id="Crc32cDllComponent" Guid="*" Win64="yes">
-          <File Id="Crc32cDll" Name="crc32c.dll" Source="installer_build\crc32c.dll" KeyPath="yes" />
-        </Component>
-
-        <!-- date-tz -->
-        <Component Id="DateTzDllComponent" Guid="*" Win64="yes">
-          <File Id="DateTzDll" Name="date-tz.dll" Source="installer_build\date-tz.dll" KeyPath="yes" />
-        </Component>
 
         <!-- ODBC driver registry entry -->
         <Component Id="MaxComputeDriverRegistry" Guid="*" Win64="yes">

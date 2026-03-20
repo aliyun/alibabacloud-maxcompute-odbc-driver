@@ -91,9 +91,7 @@ jobs:
             "libssl-3-x64.dll",
             "libprotobuf.dll",
             "pugixml.dll",
-            "zlib1.dll",
-            "crc32c.dll",
-            "date-tz.dll"
+            "zlib1.dll"
           ) | ForEach-Object {
             Copy-Item "$vcpkgBin\$_" $outputDir -ErrorAction SilentlyContinue
           }
@@ -127,9 +125,7 @@ jobs:
             "libssl-3-x64.dll",
             "libprotobuf.dll",
             "pugixml.dll",
-            "zlib1.dll",
-            "crc32c.dll",
-            "date-tz.dll"
+            "zlib1.dll"
           )
           foreach ($dll in $dlls) {
             $src = Join-Path $vcpkgBin $dll
