@@ -117,10 +117,12 @@ jobs:
           # Prepare installer_build directory
           New-Item -ItemType Directory -Force -Path installer_build | Out-Null
 
-          # Copy driver and dependency DLLs
-          $vcpkgBin = "${{ github.workspace }}\vcpkg\installed\x64-windows\bin"
+          # Copy driver DLL
           Copy-Item "build_win64\bin\maxcompute_odbc.dll" "installer_build\" -Force
-          @(
+
+          # Copy dependency DLLs from vcpkg (manifest mode installs to build dir)
+          $vcpkgBin = "${{ github.workspace }}\build_win64\vcpkg_installed\x64-windows\bin"
+          $dlls = @(
             "libcrypto-3-x64.dll",
             "libssl-3-x64.dll",
             "libprotobuf.dll",
@@ -128,8 +130,16 @@ jobs:
             "zlib1.dll",
             "crc32c.dll",
             "date-tz.dll"
-          ) | ForEach-Object {
-            Copy-Item "$vcpkgBin\$_" "installer_build\" -ErrorAction SilentlyContinue
+          )
+          foreach ($dll in $dlls) {
+            $src = Join-Path $vcpkgBin $dll
+            if (Test-Path $src) {
+              Copy-Item $src "installer_build\" -Force
+              Write-Host "Copied: $dll"
+            } else {
+              Write-Error "Missing DLL: $src"
+              exit 1
+            }
           }
 
           # Generate License.rtf from LICENSE
