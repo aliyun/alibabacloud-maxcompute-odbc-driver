@@ -263,13 +263,13 @@ Config ConnectionStringParser::parse(const std::string &connStr) {
       config.timezone = value;
     } else if (lowerKey == "namespaceschema") {
       config.namespaceSchema = value != "false";
-    } else if (lowerKey == "charset") {
+    } else if (lowerKey == "clientcharset") {
       if (!value.empty()) {
         std::string normalized = value;
         std::transform(normalized.begin(), normalized.end(), normalized.begin(),
                        [](unsigned char c) { return std::toupper(c); });
         if (normalized == "UTF8") normalized = "UTF-8";
-        config.charset = normalized;
+        config.clientCharset = normalized;
       }
     } else if (lowerKey == "fetchresultsplitsize") {
       try {
@@ -455,13 +455,13 @@ void ConnectionStringParser::updateConfig(const std::string &connStr,
       config.timezone = value;
     } else if (lowerKey == "namespaceschema") {
       config.namespaceSchema = value != "false";
-    } else if (lowerKey == "charset") {
+    } else if (lowerKey == "clientcharset") {
       if (!value.empty()) {
         std::string normalized = value;
         std::transform(normalized.begin(), normalized.end(), normalized.begin(),
                        [](unsigned char c) { return std::toupper(c); });
         if (normalized == "UTF8") normalized = "UTF-8";
-        config.charset = normalized;
+        config.clientCharset = normalized;
       }
     } else if (lowerKey == "fetchresultsplitsize") {
       config.fetchResultSplitSize = std::stoll(value);

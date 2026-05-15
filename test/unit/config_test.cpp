@@ -344,47 +344,47 @@ TEST(ConnectionStringParserTest, ParseConnectionStringWithAllParameters) {
   EXPECT_EQ(config.dataSourceName, "TestDSN");
 }
 
-TEST(ConfigTest, DefaultCharsetIsUtf8) {
+TEST(ConfigTest, DefaultClientCharsetIsUtf8) {
   Config config;
-  EXPECT_EQ(config.charset, "UTF-8");
+  EXPECT_EQ(config.clientCharset, "UTF-8");
 }
 
-TEST(ConnectionStringParserTest, ParseCharsetGbk) {
+TEST(ConnectionStringParserTest, ParseClientCharsetGbk) {
   std::string connStr =
       "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
-      "Charset=GBK";
+      "ClientCharset=GBK";
   Config config = ConnectionStringParser::parse(connStr);
-  EXPECT_EQ(config.charset, "GBK");
+  EXPECT_EQ(config.clientCharset, "GBK");
 }
 
-TEST(ConnectionStringParserTest, ParseCharsetCaseInsensitive) {
+TEST(ConnectionStringParserTest, ParseClientCharsetCaseInsensitive) {
   std::string connStr =
       "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
-      "charset=gb18030";
+      "clientcharset=gb18030";
   Config config = ConnectionStringParser::parse(connStr);
-  EXPECT_EQ(config.charset, "GB18030");
+  EXPECT_EQ(config.clientCharset, "GB18030");
 }
 
-TEST(ConnectionStringParserTest, ParseCharsetUtf8Normalized) {
+TEST(ConnectionStringParserTest, ParseClientCharsetUtf8Normalized) {
   // "UTF8" should be normalized to "UTF-8" (canonical form recognized by both
   // iconv and our helper's fast-path check).
   std::string connStr =
       "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
-      "Charset=utf8";
+      "ClientCharset=utf8";
   Config config = ConnectionStringParser::parse(connStr);
-  EXPECT_EQ(config.charset, "UTF-8");
+  EXPECT_EQ(config.clientCharset, "UTF-8");
 }
 
-TEST(ConnectionStringParserTest, ParseCharsetEmptyKeepsDefault) {
+TEST(ConnectionStringParserTest, ParseClientCharsetEmptyKeepsDefault) {
   std::string connStr =
       "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
-      "Charset=";
+      "ClientCharset=";
   Config config = ConnectionStringParser::parse(connStr);
-  EXPECT_EQ(config.charset, "UTF-8");
+  EXPECT_EQ(config.clientCharset, "UTF-8");
 }
 
-TEST(ConnectionStringParserTest, UpdateConfigParsesCharset) {
+TEST(ConnectionStringParserTest, UpdateConfigParsesClientCharset) {
   Config config;
-  ConnectionStringParser::updateConfig("Charset=BIG5", config);
-  EXPECT_EQ(config.charset, "BIG5");
+  ConnectionStringParser::updateConfig("ClientCharset=BIG5", config);
+  EXPECT_EQ(config.clientCharset, "BIG5");
 }

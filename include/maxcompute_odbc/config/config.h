@@ -47,11 +47,11 @@ class Config {
   std::map<std::string, std::string> globalSettings;
   std::string timezone = "unknown";  // Timezone for timestamp handling
   bool namespaceSchema = true;
-  // SQL_C_CHAR 输出编码: 默认 UTF-8 (与 MaxCompute 服务端一致, 不做转换)。
-  // 可选值: "UTF-8" / "GBK" / "CP936" / "GB18030" / "BIG5" 等。
-  // 用于解决 ANSI 应用 (如部分 Windows BI 工具) 拿到 UTF-8 字节
-  // 后按系统代码页解码的中文乱码问题。
-  std::string charset = "UTF-8";
+  // SQL_C_CHAR 输出编码: 驱动把字符列回吐给客户端 (ANSI 路径) 时使用的编码。
+  // 默认 UTF-8 (与 MaxCompute 服务端一致, 不做转换); 可选 "GBK" / "CP936"
+  // / "GB18030" / "BIG5" 等。仅影响 SQL_C_CHAR 路径, SQL_C_WCHAR 始终走
+  // UTF-16。 命名为 clientCharset, 避免与"服务端编码"/"传输编码"等概念混淆。
+  std::string clientCharset = "UTF-8";
 
   // MaxQA settings
   bool interactiveMode = false;          // Enable MaxQA interactive mode

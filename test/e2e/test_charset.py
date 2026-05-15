@@ -1,5 +1,5 @@
 """
-SQL_C_CHAR 编码测试 (Charset 连接串参数).
+SQL_C_CHAR 编码测试 (ClientCharset 连接串参数).
 
 pyodbc 默认走 SQL_C_WCHAR 路径取字符串列, 不会触发 driver 的 charset 转换.
 这里通过 conn.setdecoding(SQL_CHAR, ctype=SQL_C_CHAR) 强制 pyodbc 调
@@ -24,7 +24,7 @@ NIHAO_GB18030 = b"\xc4\xe3\xba\xc3"  # 与 GBK 在 BMP 上一致
 
 
 class TestCharset(BaseTest):
-    """Charset 连接串参数 e2e 测试"""
+    """ClientCharset 连接串参数 e2e 测试"""
 
     def _connect_with_charset(self, charset=None) -> pyodbc.Connection:
         conn_str = (
@@ -36,7 +36,7 @@ class TestCharset(BaseTest):
             f"interactiveMode=false;"
         )
         if charset is not None:
-            conn_str += f"Charset={charset};"
+            conn_str += f"ClientCharset={charset};"
         conn = pyodbc.connect(conn_str)
         # 强制 SQL_CHAR 列用 SQL_C_CHAR 取, 用 latin-1 解码 (1:1 字节映射,
         # 不会丢字节, 便于 .encode('latin-1') 回拿裸字节).
@@ -57,40 +57,40 @@ class TestCharset(BaseTest):
         return s.encode("latin-1")
 
     def test_default_charset_is_utf8(self):
-        """不传 Charset → SQL_C_CHAR 默认输出 UTF-8 字节"""
+        """不传 ClientCharset → SQL_C_CHAR 默认输出 UTF-8 字节"""
         conn = self._connect_with_charset(charset=None)
         try:
             data = self._read_chinese_bytes(conn)
             print(f"  default bytes: {data.hex()}")
             self.assert_equals(data, NIHAO_UTF8,
-                               "Default charset should produce UTF-8 bytes")
+                               "Default ClientCharset should produce UTF-8 bytes")
         finally:
             conn.close()
 
     def test_explicit_utf8(self):
-        """Charset=UTF-8 → UTF-8 字节"""
+        """ClientCharset=UTF-8 → UTF-8 字节"""
         conn = self._connect_with_charset(charset="UTF-8")
         try:
             data = self._read_chinese_bytes(conn)
             print(f"  utf-8 bytes:   {data.hex()}")
             self.assert_equals(data, NIHAO_UTF8,
-                               "Charset=UTF-8 should produce UTF-8 bytes")
+                               "ClientCharset=UTF-8 should produce UTF-8 bytes")
         finally:
             conn.close()
 
     def test_gbk(self):
-        """Charset=GBK → GBK 字节 (验证修复用户报告的中文乱码)"""
+        """ClientCharset=GBK → GBK 字节 (验证修复用户报告的中文乱码)"""
         conn = self._connect_with_charset(charset="GBK")
         try:
             data = self._read_chinese_bytes(conn)
             print(f"  gbk bytes:     {data.hex()}")
             self.assert_equals(data, NIHAO_GBK,
-                               "Charset=GBK should produce GBK bytes")
+                               "ClientCharset=GBK should produce GBK bytes")
         finally:
             conn.close()
 
     def test_gbk_lowercase(self):
-        """charset 参数大小写不敏感"""
+        """ClientCharset 参数大小写不敏感"""
         conn = self._connect_with_charset(charset="gbk")
         try:
             data = self._read_chinese_bytes(conn)
@@ -100,25 +100,25 @@ class TestCharset(BaseTest):
             conn.close()
 
     def test_gb18030(self):
-        """Charset=GB18030 → GB18030 字节"""
+        """ClientCharset=GB18030 → GB18030 字节"""
         conn = self._connect_with_charset(charset="GB18030")
         try:
             data = self._read_chinese_bytes(conn)
             print(f"  gb18030 bytes: {data.hex()}")
             self.assert_equals(data, NIHAO_GB18030,
-                               "Charset=GB18030 should produce GB18030 bytes")
+                               "ClientCharset=GB18030 should produce GB18030 bytes")
         finally:
             conn.close()
 
 
 if __name__ == "__main__":
     test = TestCharset()
-    print_section("SQL_C_CHAR Charset E2E Tests")
+    print_section("SQL_C_CHAR ClientCharset E2E Tests")
     test.run_test(test.test_default_charset_is_utf8,
-                  "default charset → UTF-8 bytes")
-    test.run_test(test.test_explicit_utf8, "Charset=UTF-8 → UTF-8 bytes")
-    test.run_test(test.test_gbk, "Charset=GBK → GBK bytes")
-    test.run_test(test.test_gbk_lowercase, "Charset=gbk (case-insensitive)")
-    test.run_test(test.test_gb18030, "Charset=GB18030 → GB18030 bytes")
+                  "default ClientCharset → UTF-8 bytes")
+    test.run_test(test.test_explicit_utf8, "ClientCharset=UTF-8 → UTF-8 bytes")
+    test.run_test(test.test_gbk, "ClientCharset=GBK → GBK bytes")
+    test.run_test(test.test_gbk_lowercase, "ClientCharset=gbk (case-insensitive)")
+    test.run_test(test.test_gb18030, "ClientCharset=GB18030 → GB18030 bytes")
     success = test.print_results()
     sys.exit(0 if success else 1)

@@ -93,7 +93,7 @@ SQL_TIMESTAMP_STRUCT to_sql_timestamp(const McTimestamp &mc_ts) {
 
 SQLRETURN convertAndWrite(const ColumnData &data,
                           const StmtHandle::ColumnBinding &binding,
-                          const std::string &charset) {
+                          const std::string &client_charset) {
   // 步骤 1: 处理 NULL 值 (这部分逻辑保持不变)
   if (std::holds_alternative<std::monostate>(data)) {
     if (binding.indicator_ptr) {
@@ -206,7 +206,7 @@ SQLRETURN convertAndWrite(const ColumnData &data,
                                   ? static_cast<size_t>(binding.buffer_length)
                                   : 0;
             size_t total_bytes = encoding::WriteUtf8AsCharset(
-                str_val, charset, out_buf, out_size);
+                str_val, client_charset, out_buf, out_size);
             if (binding.indicator_ptr)
               *binding.indicator_ptr = static_cast<SQLLEN>(total_bytes);
 

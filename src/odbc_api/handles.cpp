@@ -307,9 +307,9 @@ SQLRETURN StmtHandle::fetch() {
     m_bindings.resize(m_current_row->values.size());
   }
 
-  const std::string charset = m_parent_conn
-                                  ? m_parent_conn->getConfigForUpdate().charset
-                                  : std::string("UTF-8");
+  const std::string client_charset =
+      m_parent_conn ? m_parent_conn->getConfigForUpdate().clientCharset
+                    : std::string("UTF-8");
 
   // 遍历所有列，对已绑定的列进行数据转换
   for (size_t i = 0; i < m_current_row->values.size(); ++i) {
@@ -319,7 +319,7 @@ SQLRETURN StmtHandle::fetch() {
     }
 
     const auto &column_data = m_current_row->values[i];
-    SQLRETURN conv_ret = convertAndWrite(column_data, binding, charset);
+    SQLRETURN conv_ret = convertAndWrite(column_data, binding, client_charset);
     if (conv_ret != SQL_SUCCESS) {
       // 在 convertAndWrite 中应添加诊断记录
       return SQL_ERROR;
@@ -745,10 +745,10 @@ SQLRETURN StmtHandle::getData(SQLUSMALLINT col_num, SQLSMALLINT target_type,
   ColumnBinding binding{target_type, target_buf, buf_len, indicator};
 
   // 使用现有的数据转换功能
-  const std::string charset = m_parent_conn
-                                  ? m_parent_conn->getConfigForUpdate().charset
-                                  : std::string("UTF-8");
-  SQLRETURN conv_ret = convertAndWrite(column_data, binding, charset);
+  const std::string client_charset =
+      m_parent_conn ? m_parent_conn->getConfigForUpdate().clientCharset
+                    : std::string("UTF-8");
+  SQLRETURN conv_ret = convertAndWrite(column_data, binding, client_charset);
   if (conv_ret != SQL_SUCCESS) {
     return SQL_ERROR;
   }
