@@ -76,8 +76,14 @@ class HandleRegistry {
    * @return HandleRegistry 的唯一实例
    */
   static HandleRegistry &instance() {
-    static HandleRegistry inst;
-    return inst;
+    // Leaky singleton: heap-allocated and never deleted on purpose.
+    // Why: when the host (e.g. unixODBC + Python) tears down, our dylib's
+    // function-local statics may be destroyed in an order that conflicts with
+    // late SQLFreeHandle / handle-cleanup calls. A destroyed registry being
+    // re-entered from atexit chains caused SIGSEGV at process exit. Leaking it
+    // costs one allocation per process; the OS reclaims memory at exit anyway.
+    static HandleRegistry *inst = new HandleRegistry();
+    return *inst;
   }
 
   /**

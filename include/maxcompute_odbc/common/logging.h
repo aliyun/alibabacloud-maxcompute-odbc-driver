@@ -102,8 +102,13 @@ inline LogLevel stringToLevel(std::string level_str) {
 
 // Implementation
 inline Logger &Logger::getInstance() {
-  static Logger instance;
-  return instance;
+  // Leaky singleton: heap-allocated and never deleted on purpose.
+  // Why: handle destructors (ConnHandle/StmtHandle) and HandleRegistry::get()
+  // call into Logger during dylib teardown. With a function-local static, the
+  // Logger could be destroyed before the last access, producing SIGSEGV at
+  // process exit. Leaking is safe — OS closes fds and reclaims memory at exit.
+  static Logger *instance = new Logger();
+  return *instance;
 }
 
 inline Logger::Logger() : current_level_(LogLevel::Info) {
