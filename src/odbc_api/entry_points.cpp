@@ -74,6 +74,8 @@ SQLRETURN GetInfoImpl(SQLHDBC ConnectionHandle, SQLUSMALLINT InfoType,
           return L"03.80";
         else if (strcmp(ansi_str, "`") == 0)
           return L"`";
+        else if (strcmp(ansi_str, ".") == 0)
+          return L".";
         else if (strcmp(ansi_str, "No Project Connected") == 0)
           return L"No Project Connected";
         else
@@ -434,9 +436,9 @@ SQLRETURN GetInfoImpl(SQLHDBC ConnectionHandle, SQLUSMALLINT InfoType,
         break;
       }
       case SQL_MAX_TABLE_NAME_LEN: {
-        // 最大表名称长度
+        // 最大表名称长度: MaxCompute 表名上限是 128。
         if (InfoValuePtr) {
-          *(SQLUSMALLINT *)InfoValuePtr = 30;  // 假设长度
+          *(SQLUSMALLINT *)InfoValuePtr = 128;
         }
         info_length = sizeof(SQLUSMALLINT);
         break;
@@ -574,10 +576,11 @@ SQLRETURN GetInfoImpl(SQLHDBC ConnectionHandle, SQLUSMALLINT InfoType,
         break;
       }
       case SQL_CATALOG_NAME: {
-        // 是否支持目录
+        // 是否支持目录: MaxCompute 把 project 映射为 ODBC catalog,
+        // SQLTables / SQLColumns 也会返回 TABLE_CAT, 所以必须报 TRUE,
+        // 否则与目录相关的 InfoType 和结果集自相矛盾。
         if (InfoValuePtr) {
-          *(SQLUSMALLINT *)InfoValuePtr =
-              SQL_FALSE;  // MaxCompute使用project类似概念
+          *(SQLUSMALLINT *)InfoValuePtr = SQL_TRUE;
         }
         info_length = sizeof(SQLUSMALLINT);
         break;
@@ -884,16 +887,87 @@ SQLRETURN GetInfoImpl(SQLHDBC ConnectionHandle, SQLUSMALLINT InfoType,
         break;
       }
       case SQL_CATALOG_USAGE: {
-        // 目录用法
+        // Catalog 用法位掩码: MaxCompute 支持 project.schema.table 限定
+        // 出现在 DML / UDF 调用 / DDL / GRANT-REVOKE 中。
         if (InfoValuePtr) {
-          *(SQLUINTEGER *)InfoValuePtr = 0;  // 不支持标准目录功能
+          *(SQLUINTEGER *)InfoValuePtr =
+              SQL_CU_DML_STATEMENTS | SQL_CU_PROCEDURE_INVOCATION |
+              SQL_CU_TABLE_DEFINITION | SQL_CU_PRIVILEGE_DEFINITION;
         }
         info_length = sizeof(SQLUINTEGER);
         break;
       }
+      case SQL_SCHEMA_USAGE: {
+        // Schema 用法位掩码: 告诉应用在哪些语句中可以使用 schema 限定符。
+        // MaxCompute 支持 schema.table 出现在 DML、DDL、UDF 调用、GRANT/REVOKE
+        // 中; 不支持索引(INDEX_DEFINITION)。
+        if (InfoValuePtr) {
+          *(SQLUINTEGER *)InfoValuePtr =
+              SQL_SU_DML_STATEMENTS | SQL_SU_PROCEDURE_INVOCATION |
+              SQL_SU_TABLE_DEFINITION | SQL_SU_PRIVILEGE_DEFINITION;
+        }
+        info_length = sizeof(SQLUINTEGER);
+        break;
+      }
+      case SQL_CATALOG_LOCATION: {
+        // Catalog 在限定名中的位置: MaxCompute 写法是
+        // project.schema.table, catalog 在最左侧。
+        if (InfoValuePtr) {
+          *(SQLUSMALLINT *)InfoValuePtr = SQL_CL_START;
+        }
+        info_length = sizeof(SQLUSMALLINT);
+        break;
+      }
+      case SQL_CATALOG_NAME_SEPARATOR: {
+        // Catalog 与后续标识符之间的分隔符。
+        const CharType *sep = get_string_literal(".");
+        size_t len = std::char_traits<CharType>::length(sep);
+        if (InfoValuePtr && BufferLength > 0) {
+          if constexpr (std::is_same_v<CharType, char>) {
+            size_t copy_len =
+                std::min(static_cast<size_t>(BufferLength - 1), len);
+            memcpy(InfoValuePtr, sep, copy_len);
+            static_cast<char *>(InfoValuePtr)[copy_len] = '\0';
+            if (copy_len < len) {
+              result = SQL_SUCCESS_WITH_INFO;
+              pConn->addDiagRecord(
+                  {0, "01004", "String data, right truncated."});
+            }
+          } else {
+            size_t max_wchars = BufferLength / sizeof(SQLWCHAR) - 1;
+            size_t copy_len = std::min(max_wchars, len);
+            for (size_t i = 0; i < copy_len; ++i) {
+              static_cast<SQLWCHAR *>(InfoValuePtr)[i] = sep[i];
+            }
+            static_cast<SQLWCHAR *>(InfoValuePtr)[copy_len] = L'\0';
+            if (copy_len < len) {
+              result = SQL_SUCCESS_WITH_INFO;
+              pConn->addDiagRecord(
+                  {0, "01004", "String data, right truncated."});
+            }
+          }
+        }
+        info_length = static_cast<SQLSMALLINT>(len * sizeof(CharType));
+        break;
+      }
+      case SQL_MAX_IDENTIFIER_LEN: {
+        // 标识符最大长度: 与 table / schema / catalog 名长度上限保持一致。
+        if (InfoValuePtr) {
+          *(SQLUSMALLINT *)InfoValuePtr = 128;
+        }
+        info_length = sizeof(SQLUSMALLINT);
+        break;
+      }
       default:
+        // 未实现的 InfoType: 写入安全的零值并报告长度为 0,
+        // 避免应用拿到未初始化的缓冲区内容。
         MCO_LOG_DEBUG("SQLGetInfo: Unsupported InfoType: {}", InfoType);
-        return SQL_SUCCESS;
+        if (InfoValuePtr &&
+            BufferLength >= static_cast<SQLSMALLINT>(sizeof(SQLUINTEGER))) {
+          *(SQLUINTEGER *)InfoValuePtr = 0;
+        }
+        info_length = 0;
+        break;
     }
 
     // 设置字符串长度

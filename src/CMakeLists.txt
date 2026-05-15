@@ -49,6 +49,7 @@ add_library(odbc_api SHARED
         odbc_api/handles.cpp
         odbc_api/entry_points.cpp
         odbc_api/conversions.cpp
+        odbc_api/encoding.cpp
         odbc_api/odbc_exports.def
         ${CMAKE_CURRENT_SOURCE_DIR}/version.rc
 )

@@ -14,8 +14,11 @@
 namespace maxcompute_odbc {
 
 // 将ColumnData中的一个值，根据绑定信息，转换并写入用户缓冲区
+// charset: SQL_C_CHAR 输出编码 (Config::charset, 默认 "UTF-8"). 仅影响字符列
+// 的 ANSI 输出路径; SQL_C_WCHAR 始终使用 UTF-16, 与该参数无关.
 SQLRETURN convertAndWrite(const ColumnData &data,
-                          const StmtHandle::ColumnBinding &binding);
+                          const StmtHandle::ColumnBinding &binding,
+                          const std::string &charset = "UTF-8");
 
 struct OdbcColumn {
   std::string name;  // 列名 (用于 SQLDescribeCol 的 ColumnName)

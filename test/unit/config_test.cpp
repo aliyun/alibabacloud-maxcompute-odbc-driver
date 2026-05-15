@@ -343,3 +343,48 @@ TEST(ConnectionStringParserTest, ParseConnectionStringWithAllParameters) {
             std::make_optional<std::string>("https://secureproxy:8443"));
   EXPECT_EQ(config.dataSourceName, "TestDSN");
 }
+
+TEST(ConfigTest, DefaultCharsetIsUtf8) {
+  Config config;
+  EXPECT_EQ(config.charset, "UTF-8");
+}
+
+TEST(ConnectionStringParserTest, ParseCharsetGbk) {
+  std::string connStr =
+      "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
+      "Charset=GBK";
+  Config config = ConnectionStringParser::parse(connStr);
+  EXPECT_EQ(config.charset, "GBK");
+}
+
+TEST(ConnectionStringParserTest, ParseCharsetCaseInsensitive) {
+  std::string connStr =
+      "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
+      "charset=gb18030";
+  Config config = ConnectionStringParser::parse(connStr);
+  EXPECT_EQ(config.charset, "GB18030");
+}
+
+TEST(ConnectionStringParserTest, ParseCharsetUtf8Normalized) {
+  // "UTF8" should be normalized to "UTF-8" (canonical form recognized by both
+  // iconv and our helper's fast-path check).
+  std::string connStr =
+      "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
+      "Charset=utf8";
+  Config config = ConnectionStringParser::parse(connStr);
+  EXPECT_EQ(config.charset, "UTF-8");
+}
+
+TEST(ConnectionStringParserTest, ParseCharsetEmptyKeepsDefault) {
+  std::string connStr =
+      "Endpoint=https://x;Project=p;AccessKeyId=k;AccessKeySecret=s;"
+      "Charset=";
+  Config config = ConnectionStringParser::parse(connStr);
+  EXPECT_EQ(config.charset, "UTF-8");
+}
+
+TEST(ConnectionStringParserTest, UpdateConfigParsesCharset) {
+  Config config;
+  ConnectionStringParser::updateConfig("Charset=BIG5", config);
+  EXPECT_EQ(config.charset, "BIG5");
+}

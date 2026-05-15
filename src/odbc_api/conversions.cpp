@@ -1,4 +1,5 @@
 #include "maxcompute_odbc/odbc_api/conversions.h"
+#include "maxcompute_odbc/odbc_api/encoding.h"
 #include "maxcompute_odbc/platform.h"
 #include <algorithm>  // for std::transform
 #include <cctype>     // for ::tolower
@@ -91,7 +92,8 @@ SQL_TIMESTAMP_STRUCT to_sql_timestamp(const McTimestamp &mc_ts) {
 }
 
 SQLRETURN convertAndWrite(const ColumnData &data,
-                          const StmtHandle::ColumnBinding &binding) {
+                          const StmtHandle::ColumnBinding &binding,
+                          const std::string &charset) {
   // 步骤 1: 处理 NULL 值 (这部分逻辑保持不变)
   if (std::holds_alternative<std::monostate>(data)) {
     if (binding.indicator_ptr) {
@@ -196,18 +198,22 @@ SQLRETURN convertAndWrite(const ColumnData &data,
               str_val = "<unsupported_type_to_string>";
             }
 
-            size_t copy_len =
-                std::min(static_cast<size_t>(binding.buffer_length - 1),
-                         str_val.length());
-            strncpy(static_cast<char *>(binding.target_buffer), str_val.c_str(),
-                    copy_len);
-            static_cast<char *>(binding.target_buffer)[copy_len] = '\0';
+            // 通过 encoding helper 完成 UTF-8 -> 目标 charset 转换、
+            // 字符边界截断与 NUL 终止. 返回值是转换后的总字节长度,
+            // 用于报告 StrLen_or_IndPtr (供应用程序判断截断或继续读取).
+            char *out_buf = static_cast<char *>(binding.target_buffer);
+            size_t out_size = binding.buffer_length > 0
+                                  ? static_cast<size_t>(binding.buffer_length)
+                                  : 0;
+            size_t total_bytes = encoding::WriteUtf8AsCharset(
+                str_val, charset, out_buf, out_size);
             if (binding.indicator_ptr)
-              *binding.indicator_ptr = static_cast<SQLLEN>(str_val.length());
+              *binding.indicator_ptr = static_cast<SQLLEN>(total_bytes);
 
             MCO_LOG_DEBUG("format str {}", str_val);
-            return (str_val.length() > copy_len) ? SQL_SUCCESS_WITH_INFO
-                                                 : SQL_SUCCESS;
+            bool truncated =
+                out_size == 0 ? total_bytes > 0 : total_bytes > out_size - 1;
+            return truncated ? SQL_SUCCESS_WITH_INFO : SQL_SUCCESS;
           }
           // 更多宽字符处理...
 

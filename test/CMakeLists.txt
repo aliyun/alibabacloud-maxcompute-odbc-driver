@@ -54,6 +54,14 @@ if(GTest_FOUND)
     target_link_libraries(setting_parser_test PRIVATE maxcompute_client config common test_main)
     add_test(NAME setting_parser_test COMMAND setting_parser_test)
 
+    # 编码 helper 测试: 直接编译 encoding.cpp 进入测试二进制, 避免对
+    # SHARED 目标 (odbc_api) 的符号导出依赖.
+    add_executable(encoding_test
+        unit/encoding_test.cpp
+        ${CMAKE_SOURCE_DIR}/src/odbc_api/encoding.cpp)
+    target_link_libraries(encoding_test PRIVATE common test_main ${ODBC_FRAMEWORKS})
+    add_test(NAME encoding_test COMMAND encoding_test)
+
     message(STATUS "Google Test found. Building all tests.")
 else()
     message(STATUS "Google Test not found. Skipping tests.")

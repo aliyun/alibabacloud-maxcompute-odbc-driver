@@ -307,6 +307,10 @@ SQLRETURN StmtHandle::fetch() {
     m_bindings.resize(m_current_row->values.size());
   }
 
+  const std::string charset = m_parent_conn
+                                  ? m_parent_conn->getConfigForUpdate().charset
+                                  : std::string("UTF-8");
+
   // 遍历所有列，对已绑定的列进行数据转换
   for (size_t i = 0; i < m_current_row->values.size(); ++i) {
     const auto &binding = m_bindings[i];
@@ -315,7 +319,7 @@ SQLRETURN StmtHandle::fetch() {
     }
 
     const auto &column_data = m_current_row->values[i];
-    SQLRETURN conv_ret = convertAndWrite(column_data, binding);
+    SQLRETURN conv_ret = convertAndWrite(column_data, binding, charset);
     if (conv_ret != SQL_SUCCESS) {
       // 在 convertAndWrite 中应添加诊断记录
       return SQL_ERROR;
@@ -741,7 +745,10 @@ SQLRETURN StmtHandle::getData(SQLUSMALLINT col_num, SQLSMALLINT target_type,
   ColumnBinding binding{target_type, target_buf, buf_len, indicator};
 
   // 使用现有的数据转换功能
-  SQLRETURN conv_ret = convertAndWrite(column_data, binding);
+  const std::string charset = m_parent_conn
+                                  ? m_parent_conn->getConfigForUpdate().charset
+                                  : std::string("UTF-8");
+  SQLRETURN conv_ret = convertAndWrite(column_data, binding, charset);
   if (conv_ret != SQL_SUCCESS) {
     return SQL_ERROR;
   }
@@ -1004,22 +1011,41 @@ SQLRETURN StmtHandle::columns(const std::string &catalog,
   }
 
   try {
-    // In MaxCompute, the typical command to describe a table is "DESCRIBE
-    // table_name" This shows the structure of the table, similar to "DESCRIBE"
-    // in other databases
     if (table.empty()) {
       addDiagRecord({0, "HY000", "Table name is required for SQLColumns call"});
       MCO_LOG_ERROR("Table name required for SQLColumns call");
       return SQL_ERROR;
     }
 
-    std::string schemaName = "default";
-    if (!schema.empty() && schema != "%") {
-      // Include schema name to fully qualify the table
-      schemaName = schema;
+    // 与 SQLTables 一致: catalog 是模式, 但只支持当前 project。
+    // 不匹配时返回空结果集 (列结构由 convertTable 填好), 避免应用拿到误导数据。
+    const auto &config = m_parent_conn->getConfigForUpdate();
+    if (!catalog.empty() && !sqlLikeMatch(config.project, catalog)) {
+      Table empty_table;
+      auto stream_result = convertTable(empty_table, column_pattern);
+      if (!stream_result.has_value()) {
+        addDiagRecord({(SQLINTEGER)stream_result.error().code, "HY000",
+                       stream_result.error().message});
+        return SQL_ERROR;
+      }
+      m_result_stream = std::move(stream_result.value());
+      return SQL_SUCCESS;
     }
 
-    // Submit the query to the SDK
+    // Schema 为空或通配符时, 回退到连接配置中的 schema。
+    // 这与 listSchemas 的当前行为(只返回 config_.schema)保持一致——
+    // 不会跨 schema 模糊匹配同名表, 避免 BI 工具拿到错误的列定义。
+    std::string schemaName;
+    if (!schema.empty() && schema != "%" &&
+        schema.find('%') == std::string::npos &&
+        schema.find('_') == std::string::npos) {
+      schemaName = schema;
+    } else if (config.namespaceSchema && !config.schema.empty()) {
+      schemaName = config.schema;
+    } else {
+      schemaName = "default";
+    }
+
     auto table_result = m_parent_conn->getSDK()->getTable(schemaName, table);
     if (!table_result.has_value()) {
       addDiagRecord({(SQLINTEGER)table_result.error().code, "HY000",
