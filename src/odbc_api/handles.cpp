@@ -316,6 +316,7 @@ SQLRETURN StmtHandle::fetch() {
                     : std::string("UTF-8");
 
   // 遍历所有列，对已绑定的列进行数据转换
+  SQLRETURN overall_ret = SQL_SUCCESS;
   for (size_t i = 0; i < m_current_row->values.size(); ++i) {
     const auto &binding = m_bindings[i];
     if (binding.target_buffer == nullptr) {
@@ -324,16 +325,19 @@ SQLRETURN StmtHandle::fetch() {
 
     const auto &column_data = m_current_row->values[i];
     SQLRETURN conv_ret = convertAndWrite(column_data, binding, client_charset);
-    if (conv_ret != SQL_SUCCESS) {
+    if (conv_ret == SQL_ERROR) {
       // 在 convertAndWrite 中应添加诊断记录
       return SQL_ERROR;
+    }
+    if (conv_ret == SQL_SUCCESS_WITH_INFO) {
+      overall_ret = SQL_SUCCESS_WITH_INFO;
     }
   }
 
   // 增加已获取行数计数
   m_fetched_rows++;
 
-  return SQL_SUCCESS;
+  return overall_ret;
 }
 
 SQLRETURN StmtHandle::getRowCount(SQLLEN *row_count) {
@@ -755,11 +759,11 @@ SQLRETURN StmtHandle::getData(SQLUSMALLINT col_num, SQLSMALLINT target_type,
       m_parent_conn ? m_parent_conn->getConfigForUpdate().clientCharset
                     : std::string("UTF-8");
   SQLRETURN conv_ret = convertAndWrite(column_data, binding, client_charset);
-  if (conv_ret != SQL_SUCCESS) {
+  if (conv_ret == SQL_ERROR) {
     return SQL_ERROR;
   }
 
-  return SQL_SUCCESS;
+  return conv_ret;
 }
 
 // Implementation of helper functions in StmtHandle.cpp

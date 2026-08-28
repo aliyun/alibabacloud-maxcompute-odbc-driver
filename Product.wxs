@@ -7,7 +7,10 @@
              Description="Alibaba Cloud MaxCompute ODBC Driver Setup"
              Comments="Provides connectivity to MaxCompute via ODBC" />
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of MaxCompute ODBC Driver is already installed." />
+    <!-- AllowSameVersionUpgrades: 同版本号重新安装时也要移除旧产品并覆盖文件，
+         否则 MSI 文件版本规则会跳过相同版本的 DLL，导致安装后仍是旧驱动 -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of MaxCompute ODBC Driver is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Feature Definition -->

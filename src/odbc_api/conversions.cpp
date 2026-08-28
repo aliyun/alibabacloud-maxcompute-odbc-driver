@@ -1,4 +1,5 @@
 #include "maxcompute_odbc/odbc_api/conversions.h"
+#include "maxcompute_odbc/common/utils.h"
 #include "maxcompute_odbc/odbc_api/encoding.h"
 #include "maxcompute_odbc/platform.h"
 #include <algorithm>  // for std::transform
@@ -12,6 +13,7 @@
 #include <stdexcept>  // for std::stol, etc.
 #include <string>
 #include <variant>
+#include <vector>
 
 #ifndef _WIN32
 // On non-Windows we can use the date library if available
@@ -629,70 +631,43 @@ SQLRETURN convertAndWrite(const ColumnData &data,
             }
 
             // Convert UTF-8 string to UTF-16 (SQLWCHAR)
-            // Buffer length is in bytes, calculate max UTF-16 chars
-            size_t max_chars =
-                static_cast<size_t>(binding.buffer_length) / sizeof(SQLWCHAR) -
-                1;  // Leave space for null terminator
+            // First compute the full UTF-16 representation in a temporary
+            // buffer, then copy/truncate safely to the user's buffer.
+            std::vector<uint16_t> utf16_buffer(str_val.length() + 1);
+            size_t total_chars =
+                Utf8ToUtf16(str_val, utf16_buffer.data(), utf16_buffer.size());
+            size_t total_bytes = total_chars * sizeof(SQLWCHAR);
 
-            // UTF-8 to UTF-16 conversion
-            size_t out_pos = 0;
-            uint16_t *dest =
-                reinterpret_cast<uint16_t *>(binding.target_buffer);
-            const char *src = str_val.c_str();
-            size_t src_len = str_val.length();
-
-            for (size_t i = 0; i < src_len && out_pos < max_chars; ++i) {
-              unsigned char c = static_cast<unsigned char>(src[i]);
-              uint32_t codepoint;
-
-              if (c < 0x80) {
-                codepoint = c;
-              } else if ((c & 0xE0) == 0xC0) {
-                if (i + 1 >= src_len) break;
-                codepoint = ((c & 0x1F) << 6) |
-                            (static_cast<unsigned char>(src[i + 1]) & 0x3F);
-                i += 1;
-              } else if ((c & 0xF0) == 0xE0) {
-                if (i + 2 >= src_len) break;
-                codepoint =
-                    ((c & 0x0F) << 12) |
-                    ((static_cast<unsigned char>(src[i + 1]) & 0x3F) << 6) |
-                    (static_cast<unsigned char>(src[i + 2]) & 0x3F);
-                i += 2;
-              } else if ((c & 0xF8) == 0xF0) {
-                if (i + 3 >= src_len || out_pos + 1 >= max_chars) break;
-                codepoint =
-                    ((c & 0x07) << 18) |
-                    ((static_cast<unsigned char>(src[i + 1]) & 0x3F) << 12) |
-                    ((static_cast<unsigned char>(src[i + 2]) & 0x3F) << 6) |
-                    (static_cast<unsigned char>(src[i + 3]) & 0x3F);
-                i += 3;
-                // Encode as surrogate pair
-                codepoint -= 0x10000;
-                dest[out_pos++] =
-                    static_cast<uint16_t>(0xD800 | (codepoint >> 10));
-                dest[out_pos++] =
-                    static_cast<uint16_t>(0xDC00 | (codepoint & 0x3FF));
-                continue;
-              } else {
-                continue;
-              }
-              dest[out_pos++] = static_cast<uint16_t>(codepoint);
+            // Buffer length is in bytes; leave one SQLWCHAR for null terminator
+            size_t max_chars = 0;
+            if (binding.target_buffer != nullptr &&
+                binding.buffer_length >=
+                    static_cast<SQLLEN>(2 * sizeof(SQLWCHAR))) {
+              max_chars = static_cast<size_t>(binding.buffer_length) /
+                              sizeof(SQLWCHAR) -
+                          1;
             }
 
-            // Null terminate
-            dest[out_pos] = 0;
+            uint16_t *dest =
+                reinterpret_cast<uint16_t *>(binding.target_buffer);
+            size_t chars_to_copy =
+                total_chars > max_chars ? max_chars : total_chars;
+            if (dest != nullptr && chars_to_copy > 0) {
+              std::memcpy(dest, utf16_buffer.data(),
+                          chars_to_copy * sizeof(uint16_t));
+            }
+            if (dest != nullptr && max_chars > 0) {
+              dest[chars_to_copy] = 0;  // null terminate
+            }
 
             if (binding.indicator_ptr) {
-              *binding.indicator_ptr =
-                  static_cast<SQLLEN>(out_pos * sizeof(SQLWCHAR));
+              *binding.indicator_ptr = static_cast<SQLLEN>(total_bytes);
             }
 
             MCO_LOG_DEBUG("SQL_C_WCHAR: converted {} bytes to {} UTF-16 chars",
-                          str_val.length(), out_pos);
-            // Always return SQL_SUCCESS since we successfully converted the
-            // data
-            return SQL_SUCCESS;
+                          str_val.length(), total_chars);
+            return total_chars > max_chars ? SQL_SUCCESS_WITH_INFO
+                                           : SQL_SUCCESS;
           }
 
           default:
