@@ -4,11 +4,13 @@
 
 import sys
 import os
+import platform
 from datetime import datetime, date
 
 # 添加父目录到路径以便导入
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import pyodbc
 from base_test import BaseTest, print_section
 
 
@@ -229,13 +231,21 @@ class TestDataTypes(BaseTest):
         """测试大字符串"""
         conn = self.connect()
         cursor = conn.cursor()
-        
+
+        # On Windows pyodbc fetches string columns as SQL_C_WCHAR by default,
+        # whose fixed per-column buffer (500 bytes ~= 250 WCHAR) truncates
+        # strings longer than ~250 characters. Force SQL_C_CHAR so the full
+        # 1000-byte ASCII string fits in a single fetch.
+        if platform.system() == "Windows":
+            conn.setdecoding(pyodbc.SQL_WCHAR, encoding="utf-8")
+            conn.setdecoding(pyodbc.SQL_CHAR, encoding="utf-8")
+
         # 创建一个较长的字符串
         long_str = "a" * 1000
         cursor.execute(f"SELECT CAST('{long_str}' AS STRING)")
         result = cursor.fetchone()
         self.assert_equals(len(result[0]), 1000, "Long string should have correct length")
-        
+
         conn.close()
     
     def test_negative_numbers(self):
