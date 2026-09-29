@@ -70,6 +70,16 @@ if(GTest_FOUND)
     target_link_libraries(column_fetch_test PRIVATE test_main ${ODBC_FRAMEWORKS})
     add_test(NAME column_fetch_test COMMAND column_fetch_test)
 
+    # Handle-level contract: catches cursor transitions that pure segment tests cannot.
+    add_executable(statement_fetch_test
+        unit/statement_fetch_test.cpp
+        ${CMAKE_SOURCE_DIR}/src/odbc_api/handles.cpp
+        ${CMAKE_SOURCE_DIR}/src/odbc_api/conversions.cpp
+        ${CMAKE_SOURCE_DIR}/src/odbc_api/encoding.cpp
+        ${CMAKE_SOURCE_DIR}/src/odbc_api/column_fetch.cpp)
+    target_link_libraries(statement_fetch_test PRIVATE maxcompute_client config common test_main ${ODBC_FRAMEWORKS})
+    add_test(NAME statement_fetch_test COMMAND statement_fetch_test)
+
     message(STATUS "Google Test found. Building all tests.")
 else()
     message(STATUS "Google Test not found. Skipping tests.")

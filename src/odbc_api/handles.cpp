@@ -776,6 +776,13 @@ SQLRETURN StmtHandle::getData(SQLUSMALLINT col_num, SQLSMALLINT target_type,
     return SQL_NO_DATA;
   }
 
+  // Even a NULL read switches the active column. Returning early without
+  // updating the cursor would resume (or report exhaustion for) an older column.
+  if (m_getdata_cursor.column != col_num) {
+    m_getdata_cursor.reset();
+    m_getdata_cursor.column = col_num;
+  }
+
   // NULL: 长度/指示器写 SQL_NULL_DATA, 不消费任何数据, 所以重复调用还是报 NULL.
   if (std::holds_alternative<std::monostate>(column_data)) {
     if (!indicator) {
