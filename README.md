@@ -145,16 +145,28 @@ After a successful build the following files are produced:
 
 ## Installation (Windows)
 
-### Automatic Installation (Recommended)
+### MSI Installation (Recommended)
 
-1. **Copy driver files** -- Copy `maxcompute_odbc.dll` and all dependent DLLs (e.g., `libcrypto-3-x64.dll`, `libssl-3-x64.dll`, `libprotobuf.dll`, `pugixml.dll`) to a directory such as `C:\Windows\System32`.
-2. **Register via ODBC Data Source Administrator** -- Open "ODBC Data Sources (64-bit)", go to the "Drivers" tab, click "Add", select `maxcompute_odbc.dll`, set the driver name to "MaxCompute ODBC Driver", and confirm.
+1. Download the Windows x64 `.msi` installer from the
+   [official releases](https://github.com/aliyun/alibabacloud-maxcompute-odbc-driver/releases).
+2. Run the installer and follow its prompts. The installer installs the driver
+   dependencies and registers **MaxCompute ODBC Driver** with Windows.
+3. Open **ODBC Data Sources (64-bit)**. Confirm the driver appears on the
+   **Drivers** tab, then use **User DSN** or **System DSN** → **Add** to configure
+   a data source. Use a 64-bit client application with the x64 driver.
+4. Configure the MaxCompute endpoint, project and authentication settings using
+   the [usage guide](docs/usage.md), then test the connection.
 
-### Manual Registration
+### Development Builds
 
-```cmd
-regsvr32 "C:\path\to\maxcompute_odbc.dll"
-```
+For a source build, use [scripts/install_dev_driver.bat](scripts/install_dev_driver.bat)
+from an elevated Windows terminal after building. The script expects
+`build_win64/bin/maxcompute_odbc.dll` and copies dependencies from the matching
+vcpkg build directory; adjust the build location when necessary.
+
+This driver is not a COM server and does not export `DllRegisterServer`, so
+`regsvr32` cannot register it. The ODBC Administrator's **Add** action creates a
+DSN for an already registered driver; it does not install an arbitrary DLL.
 
 ## Usage
 
