@@ -362,6 +362,29 @@ Regional endpoint examples:
 
 ## Testing
 
+### Build modes
+
+The unit-test suite is part of the build contract. The standard `BUILD_TESTING`
+option (default `ON`, matching the documented vcpkg build where `gtest` is a
+declared dependency) decides what happens when Google Test is not available:
+
+| Mode | Behaviour |
+|------|-----------|
+| `-DBUILD_TESTING=ON` (default) | Configure **fails** when Google Test cannot be found, when a suite listed in `MCO_EXPECTED_UNIT_TESTS` (`test/CMakeLists.txt`) is missing, or when no test case is registered. A configured testing build therefore always contains the suites and `ctest` always has cases to run. |
+| `-DBUILD_TESTING=OFF` | Build-only / packaging mode. No test target is created and `ctest` registers nothing; the configure log states it explicitly (`MCO-BUILD-GATE: BUILD_TESTING=OFF -> driver binaries only; unit tests are NOT built, NOT registered and NOT run`). |
+
+CI runs the suites on Linux, macOS and Windows, and separately proves that the
+gate fails closed:
+
+```bash
+cmake -P scripts/check_test_gate.cmake                    # missing dependency and zero-case builds must fail
+cmake -DBUILD_DIR=build -P scripts/run_unit_tests.cmake   # runs the cases and checks the count
+```
+
+When a suite is added or removed, update `MCO_EXPECTED_UNIT_TESTS` in
+`test/CMakeLists.txt` and the `-DMIN_TESTS` value in `.github/workflows/ci.yml` in
+the same change.
+
 ### Unit Tests
 
 ```bash

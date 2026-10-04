@@ -20,6 +20,23 @@ env:
   VCPKG_COMMIT: '74e6536215718009aae747d86d84b78376bf9e09'
 
 jobs:
+  # The unit-test gate must fail closed: no Google Test, or a testing build that
+  # registers zero cases, has to break the configure instead of silently
+  # producing a "successful" build without tests. See cmake/McoTesting.cmake.
+  test-gate:
+    name: Unit-test gate (Linux/Windows)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify BUILD_TESTING behaviour
+        run: cmake -P scripts/check_test_gate.cmake
+
   build-windows:
     runs-on: windows-latest
     env:
@@ -55,9 +72,16 @@ jobs:
             -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DBUILD_TESTING=ON
 
           cmake --build build --parallel
+
+      - name: Run unit tests
+        shell: pwsh
+        run: |
+          $env:PATH = "${{ github.workspace }}\build\vcpkg_installed\x64-windows\bin;$env:PATH"
+          cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake
 
   build-macos:
     runs-on: macos-latest
@@ -92,9 +116,13 @@ jobs:
           cmake -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DBUILD_TESTING=ON
 
           cmake --build build --parallel
+
+      - name: Run unit tests
+        run: cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake
 
   build-linux:
     runs-on: ubuntu-latest
@@ -130,6 +158,10 @@ jobs:
           cmake -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DBUILD_TESTING=ON
 
           cmake --build build --parallel
+
+      - name: Run unit tests
+        run: cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake

@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `test/e2e/E2E_TEST_README.md`).
 - E2E cases for long, multi-byte, NULL and empty values read through pyodbc
   with small application buffers (`test/e2e/test_long_data.py`).
+- `BUILD_TESTING` build modes for the C++ unit-test suite: with the default `ON`,
+  configuring fails when Google Test is unavailable or when a testing build
+  registers no test case, instead of silently skipping the whole suite;
+  `-DBUILD_TESTING=OFF` is the explicit build-only mode and says so in the log.
+- `test/gate-check` fixture plus `scripts/check_test_gate.cmake`, which verify that
+  the gate fails closed without needing the driver's dependencies. Both harnesses are
+  CMake scripts, so they run unchanged on Linux, macOS and Windows and need nothing
+  but CMake to reproduce.
+- CI executes `ctest` on Linux, macOS and Windows through
+  `scripts/run_unit_tests.cmake` and asserts the number of registered cases; a
+  dedicated job checks the gate itself on Linux and Windows.
 
 ### Fixed
 - `SQLGetData` reported `SQL_ERROR` for any value that did not fit the
@@ -43,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Statement diagnostics are cleared at the start of `SQLGetData`, so
   `SQLGetDiagRec` no longer keeps returning the first record the handle ever
   produced.
+### Changed
+- `logging_test` now uses a per-case file under the platform temp directory
+  instead of the hard-coded `/tmp/mco_test_log.txt`, so it runs on Windows too and
+  no longer needs to be excluded from `ctest`.
 
 ## [1.0.0] - 2025-03-11
 

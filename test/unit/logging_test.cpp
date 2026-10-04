@@ -8,15 +8,24 @@ using namespace maxcompute_odbc;
 class LoggingTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    // 设置临时日志文件路径
-    log_file_path_ = "/tmp/mco_test_log.txt";
+    // 每个用例独占一个临时日志文件, 路径由当前平台给出:
+    //   * 固定的 "/tmp/mco_test_log.txt" 在 Windows 上不存在父目录, 打不开文件,
+    //     用例只能靠 ctest 排除掉才能过;
+    //   * Logger::setLogFile() 以追加方式打开, 同名文件残留会把上一次运行的内容
+    //     带进本次行数断言。
+    auto *test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    const std::string file_name =
+        std::string("mco_test_log_") + test_info->name() + ".log";
+    const auto log_path = std::filesystem::temp_directory_path() / file_name;
+    log_file_path_ = log_path.string();
+    std::error_code ec;
+    std::filesystem::remove(log_file_path_, ec);
   }
 
   void TearDown() override {
-    // 清理临时日志文件
-    if (std::filesystem::exists(log_file_path_)) {
-      std::filesystem::remove(log_file_path_);
-    }
+    // 清理本用例创建的日志文件 (不存在时忽略)
+    std::error_code ec;
+    std::filesystem::remove(log_file_path_, ec);
   }
 
   std::string log_file_path_;

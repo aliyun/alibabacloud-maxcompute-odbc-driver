@@ -263,6 +263,23 @@ Note: protobuf is used at the wire-format level only (via `CodedInputStream`). N
 | logging_test | `test/unit/logging_test.cpp` | Logger levels, file output, format strings (4 tests) |
 | models_test | `test/unit/models_test.cpp` | InstanceStatus, ExecuteSQLRequest XML/JSON serialization (9 tests) |
 | setting_parser_test | `test/unit/setting_parser_test.cpp` | SET statement parsing, edge cases (11 tests) |
+| encoding_test | `test/unit/encoding_test.cpp` | ANSI/UTF-8 conversion helpers and NULL handling |
+
+### Build Modes (`BUILD_TESTING`)
+
+`BUILD_TESTING=ON` (the default, and the documented vcpkg build where `gtest` is a
+declared dependency) makes the unit-test suite mandatory: configure **fails** when
+Google Test cannot be found, when a suite listed in `MCO_EXPECTED_UNIT_TESTS`
+(`test/CMakeLists.txt`) is missing, or when no test case is registered. There is no
+longer a "Google Test not found, skipping tests" path that produces a green build
+which ran nothing. `-DBUILD_TESTING=OFF` is the explicit build-only / packaging mode
+and the configure log states that no tests were built or run.
+
+CI executes every suite on Linux, macOS and Windows and asserts the registered case
+count; `cmake -P scripts/check_test_gate.cmake` proves the gate itself fails closed
+and `cmake -P scripts/run_unit_tests.cmake` is the local equivalent of the CI test step.
+Adding or removing a suite means updating `MCO_EXPECTED_UNIT_TESTS` and the
+`DMIN_TESTS` argument in `.github/workflows/ci.yml` in the same PR.
 
 ### E2E Tests (Python pyodbc)
 Located in `test/e2e/`. Requires a running MaxCompute service and registered ODBC driver. Tests cover connection, queries, metadata, data types, error handling.
