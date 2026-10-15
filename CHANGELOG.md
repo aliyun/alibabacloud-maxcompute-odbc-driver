@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `logging_test` now uses a per-case file under the platform temp directory
   instead of the hard-coded `/tmp/mco_test_log.txt`, so it runs on Windows too and
   no longer needs to be excluded from `ctest`.
+- CI and the release workflow both run the whole suite through
+  `scripts/run_unit_tests.cmake`, which asserts the registered case count (7 today,
+  matching `MCO_EXPECTED_UNIT_TESTS`) before executing `ctest`; the release
+  workflow no longer skips `logging_test`.
 
 ## [1.0.0] - 2025-03-11
 
