@@ -71,15 +71,15 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DVCPKG_APPLOCAL_DEPS=OFF
+            -DVCPKG_APPLOCAL_DEPS=OFF `
+            -DBUILD_TESTING=ON
 
           cmake --build build_win64 --parallel
 
       - name: Run unit tests
         run: |
           $env:PATH = "${{ github.workspace }}\build_win64\vcpkg_installed\x64-windows\bin;$env:PATH"
-          cd build_win64
-          ctest --output-on-failure --timeout 120 --exclude-regex "logging_test"
+          cmake -DBUILD_DIR=build_win64 -P scripts/run_unit_tests.cmake
 
       - name: Copy dependencies
         run: |
@@ -193,7 +193,8 @@ jobs:
           cmake -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DBUILD_TESTING=ON
 
           cmake --build build --parallel
 
@@ -237,14 +238,14 @@ jobs:
           cmake -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DBUILD_TESTING=ON
 
           cmake --build build --parallel
 
       - name: Run unit tests
         run: |
-          cd build
-          ctest --output-on-failure --timeout 120 --exclude-regex "logging_test"
+          cmake -DBUILD_DIR=build -P scripts/run_unit_tests.cmake
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

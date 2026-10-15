@@ -73,11 +73,15 @@ endif()
 # Add include directories
 include_directories(include)
 
+# Unit-test gate: with BUILD_TESTING=ON (default) a build that cannot find
+# Google Test or that registers zero test cases fails at configure time;
+# with BUILD_TESTING=OFF only the driver is built and the log says so.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/McoTesting.cmake)
+
 # Add subdirectories
 add_subdirectory(src)
 
-# Enable testing
-enable_testing()
+mco_testing_begin()
 add_subdirectory(test)
 
 # Add code formatting targets
