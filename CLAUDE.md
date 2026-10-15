@@ -279,7 +279,7 @@ CI executes every suite on Linux, macOS and Windows and asserts the registered c
 count; `cmake -P scripts/check_test_gate.cmake` proves the gate itself fails closed
 and `cmake -P scripts/run_unit_tests.cmake` is the local equivalent of the CI test step.
 Adding or removing a suite means updating `MCO_EXPECTED_UNIT_TESTS` and the
-`DMIN_TESTS` argument in `.github/workflows/ci.yml` in the same PR.
+`-DMIN_TESTS` argument in `.github/workflows/ci.yml` in the same PR (both are 7 today).
 
 ### E2E Tests (Python pyodbc)
 Located in `test/e2e/`. Requires a running MaxCompute service and registered ODBC driver. Tests cover connection, queries, metadata, data types, error handling.

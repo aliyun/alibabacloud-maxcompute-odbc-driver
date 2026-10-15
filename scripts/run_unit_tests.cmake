@@ -3,11 +3,12 @@
 # Executes the registered ctest cases and refuses to report success for a build that
 # contains (almost) no tests.
 #
-#   cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake
+#   cmake -DBUILD_DIR=build -P scripts/run_unit_tests.cmake
+#   cmake -DBUILD_DIR=build_win64 -DMIN_TESTS=7 -P scripts/run_unit_tests.cmake
 #
 #   BUILD_DIR       CMake build directory to test (default: ./build)
-#   MIN_TESTS       minimum number of registered cases (default: 5, keep it in sync
-#                   with MCO_EXPECTED_UNIT_TESTS in test/CMakeLists.txt)
+#   MIN_TESTS       minimum number of registered cases (default: 7, which is the size of
+#                   MCO_EXPECTED_UNIT_TESTS in test/CMakeLists.txt -- change both together)
 #
 # The case list is printed first, the count is checked, and only then is ctest
 # executed with --output-on-failure. A quiet "no tests found" run can therefore never
@@ -22,7 +23,7 @@ if(NOT IS_DIRECTORY "${BUILD_DIR}")
 endif()
 
 if(NOT DEFINED MIN_TESTS)
-    set(MIN_TESTS 5)
+    set(MIN_TESTS 7)
 endif()
 if(MIN_TESTS LESS 1)
     message(FATAL_ERROR "MCO-UNIT-TESTS: MIN_TESTS must be >= 1 (got ${MIN_TESTS})")

@@ -81,7 +81,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "${{ github.workspace }}\build\vcpkg_installed\x64-windows\bin;$env:PATH"
-          cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake
+          cmake -DBUILD_DIR=build -DMIN_TESTS=7 -P scripts/run_unit_tests.cmake
 
   build-macos:
     runs-on: macos-latest
@@ -122,7 +122,7 @@ jobs:
           cmake --build build --parallel
 
       - name: Run unit tests
-        run: cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake
+        run: cmake -DBUILD_DIR=build -DMIN_TESTS=7 -P scripts/run_unit_tests.cmake
 
   build-linux:
     runs-on: ubuntu-latest
@@ -164,4 +164,4 @@ jobs:
           cmake --build build --parallel
 
       - name: Run unit tests
-        run: cmake -DBUILD_DIR=build -DMIN_TESTS=5 -P scripts/run_unit_tests.cmake
+        run: cmake -DBUILD_DIR=build -DMIN_TESTS=7 -P scripts/run_unit_tests.cmake
