@@ -4,11 +4,142 @@
 
 import sys
 import os
+import ctypes
 
 # 添加父目录到路径以便导入
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from base_test import BaseTest, print_section
+
+
+def _load_odbc():
+    """加载 ODBC Driver Manager (Windows: odbc32, Linux/Unix: libodbc)"""
+    if sys.platform == "win32":
+        return ctypes.WinDLL("odbc32.dll")
+    return ctypes.CDLL("libodbc.so.2")
+
+
+# x64 下 SQLLEN/SQLULEN 均为 64 位, 显式声明签名避免缓冲区越界
+_odbc = _load_odbc()
+_odbc.SQLAllocHandle.restype = ctypes.c_short
+_odbc.SQLAllocHandle.argtypes = [ctypes.c_short, ctypes.c_void_p,
+                                 ctypes.POINTER(ctypes.c_void_p)]
+_odbc.SQLSetEnvAttr.restype = ctypes.c_short
+_odbc.SQLSetEnvAttr.argtypes = [ctypes.c_void_p, ctypes.c_int,
+                                ctypes.c_void_p, ctypes.c_int]
+_odbc.SQLDriverConnectW.restype = ctypes.c_short
+_odbc.SQLDriverConnectW.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                    ctypes.c_wchar_p, ctypes.c_short,
+                                    ctypes.c_wchar_p, ctypes.c_short,
+                                    ctypes.POINTER(ctypes.c_short),
+                                    ctypes.c_ushort]
+_odbc.SQLExecDirectW.restype = ctypes.c_short
+_odbc.SQLExecDirectW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p,
+                                 ctypes.c_int]
+_odbc.SQLFreeStmt.restype = ctypes.c_short
+_odbc.SQLFreeStmt.argtypes = [ctypes.c_void_p, ctypes.c_short]
+_odbc.SQLDisconnect.restype = ctypes.c_short
+_odbc.SQLDisconnect.argtypes = [ctypes.c_void_p]
+_odbc.SQLFreeHandle.restype = ctypes.c_short
+_odbc.SQLFreeHandle.argtypes = [ctypes.c_short, ctypes.c_void_p]
+_odbc.SQLDescribeCol.restype = ctypes.c_short
+_odbc.SQLDescribeCol.argtypes = [
+    ctypes.c_void_p, ctypes.c_ushort, ctypes.c_char_p, ctypes.c_short,
+    ctypes.POINTER(ctypes.c_short), ctypes.POINTER(ctypes.c_short),
+    ctypes.POINTER(ctypes.c_ulonglong), ctypes.POINTER(ctypes.c_short),
+    ctypes.POINTER(ctypes.c_short),
+]
+_odbc.SQLColAttribute.restype = ctypes.c_short
+_odbc.SQLColAttribute.argtypes = [
+    ctypes.c_void_p, ctypes.c_ushort, ctypes.c_short, ctypes.c_char_p,
+    ctypes.c_short, ctypes.POINTER(ctypes.c_short),
+    ctypes.POINTER(ctypes.c_longlong),
+]
+
+SQL_DESC_CONCISE_TYPE = 2
+SQL_HANDLE_ENV = 1
+SQL_HANDLE_DBC = 2
+SQL_HANDLE_STMT = 3
+SQL_DRIVER_NOPROMPT = 0
+SQL_NTS = -3
+SQL_SUCCESS_VALUES = (0, 1)  # SQL_SUCCESS / SQL_SUCCESS_WITH_INFO
+
+
+def _query_column_types(sql, ncols):
+    """通过原生 ODBC (Driver Manager -> 注册的 MaxCompute 驱动) 执行 sql,
+    返回每列的 (SQLDescribeCol 类型码, SQLColAttribute SQL_DESC_CONCISE_TYPE).
+
+    pyodbc 5.x 的 cursor.description type_code 返回的是 Python 类型对象
+    (str/int/float...), 不携带 ODBC SQL 类型码; 之前 SQLDescribeCol /
+    SQLColAttribute 测试因此把类型断言整个剥掉了. 这里走原生路径恢复验证,
+    与 Power BI 等原生 ODBC 消费者看到的行为一致.
+    """
+    from config import config
+
+    h_env = ctypes.c_void_p()
+    h_dbc = ctypes.c_void_p()
+    h_stmt = ctypes.c_void_p()
+    try:
+        rc = _odbc.SQLAllocHandle(SQL_HANDLE_ENV, None, ctypes.byref(h_env))
+        if rc not in SQL_SUCCESS_VALUES:
+            raise RuntimeError(f"SQLAllocHandle(ENV) failed, rc={rc}")
+        rc = _odbc.SQLSetEnvAttr(h_env, 200, ctypes.c_void_p(3), 0)  # ODBC3
+        if rc not in SQL_SUCCESS_VALUES:
+            raise RuntimeError(f"SQLSetEnvAttr failed, rc={rc}")
+        rc = _odbc.SQLAllocHandle(SQL_HANDLE_DBC, h_env, ctypes.byref(h_dbc))
+        if rc not in SQL_SUCCESS_VALUES:
+            raise RuntimeError(f"SQLAllocHandle(DBC) failed, rc={rc}")
+
+        conn_str_w = ctypes.create_unicode_buffer(
+            config.create_connection_string())
+        out = ctypes.create_unicode_buffer(1024)
+        out_len = ctypes.c_short()
+        rc = _odbc.SQLDriverConnectW(
+            h_dbc, None, conn_str_w, SQL_NTS, out, 1024,
+            ctypes.byref(out_len), SQL_DRIVER_NOPROMPT)
+        if rc not in SQL_SUCCESS_VALUES:
+            raise RuntimeError(f"SQLDriverConnectW failed, rc={rc}")
+        rc = _odbc.SQLAllocHandle(SQL_HANDLE_STMT, h_dbc, ctypes.byref(h_stmt))
+        if rc not in SQL_SUCCESS_VALUES:
+            raise RuntimeError(f"SQLAllocHandle(STMT) failed, rc={rc}")
+
+        sql_w = ctypes.create_unicode_buffer(sql)
+        rc = _odbc.SQLExecDirectW(h_stmt, sql_w, SQL_NTS)
+        if rc not in SQL_SUCCESS_VALUES:
+            raise RuntimeError(f"SQLExecDirectW failed, rc={rc}")
+
+        results = []
+        for col in range(1, ncols + 1):
+            name = ctypes.create_string_buffer(256)
+            name_len = ctypes.c_short()
+            data_type = ctypes.c_short()
+            col_size = ctypes.c_ulonglong()
+            digits = ctypes.c_short()
+            nullable = ctypes.c_short()
+            rc = _odbc.SQLDescribeCol(
+                h_stmt, col, name, 256, ctypes.byref(name_len),
+                ctypes.byref(data_type), ctypes.byref(col_size),
+                ctypes.byref(digits), ctypes.byref(nullable))
+            if rc not in SQL_SUCCESS_VALUES:
+                raise RuntimeError(f"SQLDescribeCol failed for column {col}")
+            concise = ctypes.c_longlong()
+            rc = _odbc.SQLColAttribute(
+                h_stmt, col, SQL_DESC_CONCISE_TYPE,
+                None, 0, None, ctypes.byref(concise))
+            if rc not in SQL_SUCCESS_VALUES:
+                raise RuntimeError(
+                    f"SQLColAttribute failed for column {col}")
+            results.append((data_type.value, concise.value))
+        return results
+    finally:
+        if h_stmt:
+            _odbc.SQLFreeStmt(h_stmt, 0)  # SQL_CLOSE / unbind
+            _odbc.SQLFreeHandle(SQL_HANDLE_STMT, h_stmt)
+        if h_dbc:
+            _odbc.SQLDisconnect(h_dbc)
+            _odbc.SQLFreeHandle(SQL_HANDLE_DBC, h_dbc)
+        if h_env:
+            _odbc.SQLFreeHandle(SQL_HANDLE_ENV, h_env)
 
 
 class TestMetadata(BaseTest):
@@ -72,6 +203,8 @@ class TestMetadata(BaseTest):
 
     def test_sqldescribecol(self):
         """测试 SQLDescribeCol - 描述列属性"""
+        import pyodbc
+
         conn = self.connect()
         cursor = conn.cursor()
 
@@ -92,28 +225,50 @@ class TestMetadata(BaseTest):
         # Check third column (pi)
         self.assert_not_none(desc[2][0], "Column 3 name should not be None")
 
+        # 真实类型码走原生 SQLDescribeCol 验证 (pyodbc description 的 type_code
+        # 在 5.x 是 Python 类型对象, 无法表达 SQL_WVARCHAR):
+        # STRING 字面量列必须上报 SQL_WVARCHAR, 让 Power BI / Wide-API 消费者
+        # 通过 SQL_C_WCHAR 直接拿 UTF-16, 避免 zh-CN Windows 上的 GBK 误解码.
+        types = _query_column_types("SELECT 1 as num, 'test' as str, 3.14 as pi", 3)
+        self.assert_equals(types[0][0], pyodbc.SQL_BIGINT,
+                           "Integer literal column should report SQL_BIGINT")
+        self.assert_equals(types[1][0], pyodbc.SQL_WVARCHAR,
+                           "STRING literal column should report SQL_WVARCHAR")
+        self.assert_equals(types[2][0], pyodbc.SQL_DOUBLE,
+                           "Float literal column should report SQL_DOUBLE")
+
+        # pyodbc 层保留粗粒度断言: 文本列映射为 str
+        self.assert_equals(desc[1][1], str,
+                           "STRING literal column should map to str in pyodbc")
+
         conn.close()
-    
+
     def test_sqlcolattribute(self):
         """测试 SQLColAttribute - 获取列属性"""
+        import pyodbc
+
         conn = self.connect()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT 1 as test_col")
+        # 同时验证 STRING / 整数两条映射, Power BI 走 SQLColAttribute 探测.
+        cursor.execute("SELECT 1 as test_col, 'hello' as text_col")
 
-        # pyodbc does not have getcolattr method
-        # Use cursor.description to get column attributes
         desc = cursor.description
         self.assert_not_none(desc, "Cursor description should not be None")
-        self.assert_equals(len(desc), 1, "Should have 1 column")
+        self.assert_equals(len(desc), 2, "Should have 2 columns")
 
         # Column name is at index 0
-        col_name = desc[0][0]
-        self.assert_not_none(col_name, "Column name should not be None")
+        self.assert_not_none(desc[0][0], "Column name should not be None")
+        self.assert_not_none(desc[1][0], "Column name should not be None")
 
-        # Column type code is at index 1
-        col_type = desc[0][1]
-        self.assert_not_none(col_type, "Column type should not be None")
+        # pyodbc 没有 getcolattr 方法, 走原生 SQLColAttribute 拿
+        # SQL_DESC_CONCISE_TYPE (pyodbc description 的 type_code 在 5.x
+        # 是 Python 类型对象, 无法表达 SQL_WVARCHAR).
+        types = _query_column_types("SELECT 1 as test_col, 'hello' as text_col", 2)
+        self.assert_equals(types[0][1], pyodbc.SQL_BIGINT,
+                           "Integer literal should report SQL_BIGINT")
+        self.assert_equals(types[1][1], pyodbc.SQL_WVARCHAR,
+                           "STRING literal should report SQL_WVARCHAR")
 
         conn.close()
     
